@@ -7,6 +7,8 @@
    * POF
    * BSP
    * VP
+ * Testing
+  * Check sample POF file for how vertex normals are arranged (1 per face that uses each vertex?)
  * Finish writing bintools module
   * short, ushort
   * char (signed byte)
