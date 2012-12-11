@@ -1,0 +1,21 @@
+#summary Breakdown of the import script
+#labels Phase-Requirements
+
+The importer should open an interface in Blender to select various options for the import:
+ * Import from a VP file?
+ * Detail level(s) and/or subobject(s) to import?
+ * Which axis should be fore/aft in Blender?
+ * Import UV mapping?
+  * Import textures?
+   * Create Blender materials from shine, glow, etc. maps?
+ * Which helper empties should be created (if any)?
+
+Debugging options will include:
+ * Import sortnorms as cubes grouped hierarchically.
+ * Print verbose messages in the console.
+
+When importing from a VP file, the user will select a VP file with the file browser instead of a POF file.  After a file is selected, the importer will load the VP file and search through it for all files with the `*`.pof extension, listing them for the user to select one.  The file will then be extracted from the VP file as a RawData class so it can be read like its own file without having to open a new file on the disk.  If textures are to be imported, the importer will try to find them in the VP file.  If they can't be found, the user will be given a file browser and will be asked to locate either a folder where the textures will be located or another VP file.  If the textures are located in a VP file, they will be extracted from the VP file into Blender's current directory.  The importer will attempt to pack them into the Blender file after import and will delete the temporary files if successful.
+
+For the sake of consistency, all objects will be imported relative to Blender's global center point.  If subobjects are imported with their parent objects, they will be grouped and have their location offset accordingly.  The fore/aft axis option is meant as a convenience to modelers who are used to using Blender's global Y axis for fore/aft, as POF files all use the Z axis for fore/aft.  When importing, points will actually be mapped accordingly, rather than importing directly and rotating the imported model.
+
+Each level of texturing import has its own purpose.  Importing UV maps only will help apply different textures to an existing model, importing existing textures will help with modifying a model or texture, and importing shine, glow, etc. maps as Blender materials will help with cinematic rendering.
