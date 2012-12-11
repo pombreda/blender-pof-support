@@ -1,0 +1,15 @@
+#labels Phase-Design
+=Methods=
+
+ * *writebyte()* - takes a number from 0 to 255, returns a string of 1 byte representing the number's binary value.  Raises *ValueError* exception if the given number is outside that range.
+ * *writeint()* - takes an integer, returns a string of 4 bytes representing the integer's signed binary value.  Raises *ValueError* exception if the given number is outside the range of 32-bit integers.
+ * *writeuint()* - like *writeint()*, but returns a string of 4 bytes representing the integer's unsigned binary value.  Also raises *ValueError* exception if the given integer is negative.  Optionally takes a boolean variable *quiet* which suppresses the *ValueError* exception and makes a given negative integer positive if true.
+ * *writefloat()* - takes a float, returns a string of 4 bytes representing the float's binary value.
+ * *readbyte()* - takes a bytes object of length 1, returns an integer.
+ * *readint()* - takes a bytes object representing a signed Int32, returns an integer.
+ * *readuint()* - takes a bytes object representing an unsigned Int32, returns a positive integer.
+ * *readfloat()* - takes a bytes object representing an IEEE-754 float, returns a float.
+
+=Classes=
+
+ * *RawData()* - a file-like object which takes a bytes object as an argument.
