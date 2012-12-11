@@ -1,6 +1,12 @@
 #summary Immediate to-do list--update frequently and strike off items when they have been done.
 #labels Featured,Phase-Implementation
 
+ * Add wiki pages
+  * ~~To-do list~~
+  * File formats
+   * POF
+   * BSP
+   * VP
  * Finish writing bintools module
   * short, ushort
   * char (signed byte)
