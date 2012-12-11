@@ -18,6 +18,9 @@
     * Vector
     * Vertex
     * Face
+     * Centroid calculation
+     * Face normal calculation
+     * Vertex normals calculation
    * Classes for each chunk
     * Header
     * Textures
