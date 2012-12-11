@@ -1,5 +1,7 @@
 #summary Miscellaneous thoughts and notes for future reference.
-#labels Phase-QA
+#labels Phase-QA,Featured
 
 ==Testing the importer and exporter==
 In the early stages, we can test the BSP tree generator by importing an existing POF file and exporting just a single submodel from it, then opening the resultant POF file in PCS or ModelView32.
+
+Additional tests should include making sure calculated stuff equals actual values.  For example, `HeaderChunk.length` should ideally equal the length of the data passed when instantiating the class when reading from a POF file.
