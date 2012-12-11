@@ -8,5 +8,25 @@
  * Finish writing volition module
   * POF utilities
    * BSP tree generator
+   * Helper data types
+    * Vector
+    * Vertex
+    * Face
    * Classes for each chunk
+    * Header
+    * Textures
+    * Paths
+    * Special points
+    * Shield mesh
+    * Eye points
+    * Gun points
+    * Turret gun points
+    * Dock points
+    * Thruster glows
+    * Subobjects
+    * Insignia
+    * Autocentering
+    * Glow points
+    * Shield mesh collision tree
+    * BSP data blocks
   * VP utilities
