@@ -21,7 +21,7 @@ def readfloat(bytes):
         n += int(frac[i]) * 2 ** -(i + 1)
     n *= -1 ** int(sign)
     n *= 2 ** (int(e, 2) - 127)
-	  return n
+    return n
      
 class RawData:
     """Creates an object that can be read like a file.  Takes any sequence of data as an argument.  May typically be used to pass only a part of a file to a function so that the part of the file can still be read like a file.
