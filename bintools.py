@@ -1,28 +1,3 @@
-def readint(bytes):
-    """Takes a string of length four as an argument.  Interprets a binary/escaped hex string as an integer."""
-    if len(bytes) != 4:
-        raise ValueError
-    n = ord(bytes[3]) << 24
-    n += ord(bytes[2]) << 16
-    n += ord(bytes[1]) << 8
-    n += ord(bytes[0])
-    return n
-
-def readfloat(bytes):
-    """Takes a string of length four as an argument.  Interprets a binary/escaped hex string as a float."""
-    if len(bytes) != 4:
-        raise ValueError
-    binstr = bin(getInt(bytes))[2:]
-    sign = binstr[0]
-    e = binstr[1:9]
-    frac = binstr[9:]
-    n = 1.0
-    for i in range(len(frac)):
-        n += int(frac[i]) * 2 ** -(i + 1)
-    n *= -1 ** int(sign)
-    n *= 2 ** (int(e, 2) - 127)
-    return n
-     
 class RawData:
     """Creates an object that can be read like a file.  Takes any sequence of data as an argument.  May typically be used to pass only a part of a file to a function so that the part of the file can still be read like a file.
     
