@@ -9,10 +9,10 @@
    * VP
  * Testing
   * Check sample POF file for how vertex normals are arranged (1 per face that uses each vertex?)
- * Finish writing bintools module
-  * short, ushort
-  * char (signed byte)
-  * vector
+ * ~~Finish writing bintools module~~ _Anything not included in `struct` will be included in the volition module._
+  * ~~short, ushort~~
+  * ~~char (signed byte)~~
+  * ~~vector~~
  * Finish writing volition module
   * POF utilities
    * BSP tree generator
