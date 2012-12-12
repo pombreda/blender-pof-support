@@ -41,3 +41,11 @@
     * Shield mesh collision tree
     * BSP data blocks
   * VP utilities
+
+==What NEEDS to be done before we can test==
+ * volition module
+ * Blender scripts for basic import export
+
+==What does NOT need to be done before we can test==
+ * All the formality of a Blender addon
+ * A user interface
