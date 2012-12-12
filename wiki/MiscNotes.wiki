@@ -5,3 +5,6 @@
 In the early stages, we can test the BSP tree generator by importing an existing POF file and exporting just a single submodel from it, then opening the resultant POF file in PCS or ModelView32.
 
 Additional tests should include making sure calculated stuff equals actual values.  For example, `HeaderChunk.length` should ideally equal the length of the data passed when instantiating the class when reading from a POF file.
+
+==Not making a bintools module==
+I'll just include `read()` and `write()` methods (utilizing `pack()` and `unpack()` from the `struct` library) in each object we need to define.  This is basically how the .3ds importer and exporter for Blender works.
