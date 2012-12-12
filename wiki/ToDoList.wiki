@@ -43,9 +43,10 @@
   * VP utilities
 
 ==What NEEDS to be done before we can test==
- * volition module
+ * volition module with POF stuff
  * Blender scripts for basic import export
 
 ==What does NOT need to be done before we can test==
  * All the formality of a Blender addon
  * A user interface
+ * volition module with VP stuff
