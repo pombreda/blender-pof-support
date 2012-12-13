@@ -17,11 +17,11 @@
   * POF utilities
    * BSP tree generator
    * Helper data types
-    * Vector
-    * Vertex
+    * ~~Vector~~
+    * ~~Vertex~~
     * Face
-     * Centroid calculation
-     * Face normal calculation
+     * ~~Centroid calculation~~
+     * ~~Face normal calculation~~
      * Vertex normals calculation
    * Classes for each chunk
     * Header
