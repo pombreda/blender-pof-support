@@ -11,3 +11,83 @@ Reading a chunk goes like this:
  # A chunk is created with `this_chunk = DockPointChunk()`
   * A chunk can be also instantiated by passing the chunk's variables to the constructor, which can be used when writing chunks.
  # `this_chunk.read(raw_chunk_data)` is called.
+ # The function reads through the raw data and assigns data to variables.
+
+=Outline of classes and functions=
+
+ * Exceptions
+  * FileFormatError(StandardError) - Some part of the file being read or written indicates this is not, in fact, a POF file.
+  * InvalidChunkError(StandardError) - Some part of this chunk is borked so the chunk can't be read or written.
+  * InvalidBSPError(StandardError) - Some part of the BSP tree is borked so it can't be read or written.
+  * VertListError(StandardError) - Some part of the vertex list is borked so a BSP tree can't be created.
+  * FaceListError(StandardError) - Some part of the face list is borked so a BSP tree can't be created.
+  * GeometryError(StandardError) - Some part of the geometry is borked, or the vertex list doesn't match the face list.  Either way, a BSP tree can't be created.
+ * Wrappers for `pack()` and `unpack()`
+  * unpack_byte()
+  * unpack_char()
+  * unpack_short()
+  * unpack_ushort()
+  * unpack_int()
+  * unpack_uint()
+  * unpack_float()
+  * unpack_vector()
+  * unpack_string()
+  * pack_byte()
+  * pack_char()
+  * pack_short()
+  * pack_ushort()
+  * pack_int()
+  * pack_uint()
+  * pack_float()
+  * pack_vector()
+  * pack_string()
+ * Helper classes and methods
+  * `RawData` class
+  * `vector()` method analogous to `int()` or `float()`
+  * `Vertex` class
+  * `Face` class
+ * Main POF-handling functions
+  * read_pof()
+  * write_pof()
+ * Main BSP-generator functions
+  * make_defpoints()
+  * make_polylist()
+  * generate_tree_recursion()
+ * POF chunks (classes)
+  * HeaderChunk
+  * TextureChunk
+  * PinfChunk
+  * PathChunk
+  * SpecialChunk
+  * ShieldChunk
+   * get_vert_list()
+   * get_face_list()
+   * set_vert_list()
+   * set_face_list()
+  * EyeChunk
+  * GunChunk
+  * TurretChunk
+  * DockChunk
+  * ThrusterChunk
+  * SubmodelChunk
+   * get_vert_list()
+   * get_face_list()
+   * make_bsp_tree()
+  * LogoChunk
+  * CenterChunk
+  * GlowpointChunk
+  * ShieldCollisionChunk
+ * BSP blocks (classes)
+  * DefpointsBlock
+  * EndBlock
+  * FlatpolyBlock
+  * TmappolyBlock
+  * SortnormBlock
+  * BoundboxBlock
+
+==SubmodelChunk==
+This class has four methods in addition to `read()`, `write()`, `__init__()`, `__len__()`, and `__repr__()`.  Upon calling `read()`, the BSP data is parsed into a list of BSP blocks `self.bsp_data`.  Upon calling `write()`, `self.bsp_data` is parsed into a packed BSP tree along with the rest of the chunk.
+
+ * `get_vert_list()` reads through `self.bsp_data` and stores `self.vert_list` as a list of `Vertex` objects.  Returns true if successful, raises `InvalidBSPError` if unsuccessful.
+ * `get_face_list()` like `get_vert_list()`, but with faces.
+ * `make_bsp_tree()` creates a list of BSP blocks `self.bsp_data` using `self.vert_list` and `self.face_list`.  Returns true if successful, raises various exceptions if unsuccessful, depending on the problem.
