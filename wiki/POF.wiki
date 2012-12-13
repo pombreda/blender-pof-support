@@ -102,7 +102,7 @@ for each debris piece, i
 
 for version<2009, mass is a volume mass
 for version>=2009, mass is an area mass
-conversion: area_mass=4.65*(vol_mass^2/3); also scale moment_inertia by vol_mass/area_mass
+conversion: `area_mass=4.65*(vol_mass^2/3)`; also scale moment_inertia by vol_mass/area_mass
 if there is no cross_section data, num_cross_sections is -1 instead of 0, as one would expect.
  
 
