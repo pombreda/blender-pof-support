@@ -4,7 +4,7 @@
  * Add wiki pages
   * ~~To-do list~~
   * File formats
-   * POF
+   * ~~POF~~
    * BSP
    * VP
  * Testing
