@@ -24,7 +24,7 @@
      * ~~Face normal calculation~~
      * Vertex normals calculation
    * Classes for each chunk
-    * Header
+    * ~~Header~~
     * Textures
     * Paths
     * Special points
