@@ -6,5 +6,27 @@ In the early stages, we can test the BSP tree generator by importing an existing
 
 Additional tests should include making sure calculated stuff equals actual values.  For example, `HeaderChunk.length` should ideally equal the length of the data passed when instantiating the class when reading from a POF file.
 
-==Not making a bintools module==
-I'll just include `read()` and `write()` methods (utilizing `pack()` and `unpack()` from the `struct` library) in each object we need to define.  This is basically how the .3ds importer and exporter for Blender works.
+==Vertex normals==
+Calculating vertex normals can only be done with an edge object with the boolean attribute `seam` or something similar to mark smoothgroups.  Something like:
+
+{{{
+class Model:
+    vertices = list()
+    edges = list()
+    faces = list()
+    class Vertex:
+        coords = vector()
+        normals = list()
+    class Edge:
+        vertices = list() #size=2
+        seam = True
+    class Face:
+        edges = list()
+        # __init__() function checks to make sure edges connect
+        normal = vector()
+    def make_vert_list()
+    def make_face_list()
+    def calculate_normals()
+}}}
+
+In this example, `Model` should be the main class we're working with, only creating `Vertex`, `Edge`, and `Face` objects to add them to a `Model` object as in `Model.vertices.append(Vertex(coords))`.
