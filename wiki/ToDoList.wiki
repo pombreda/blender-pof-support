@@ -25,9 +25,9 @@
      * Vertex normals calculation
    * Classes for each chunk
     * ~~Header~~
-    * Textures
-    * Paths
-    * Special points
+    * ~~Textures~~
+    * ~~Paths~~
+    * ~~Special points~~
     * Shield mesh
     * Eye points
     * Gun points
