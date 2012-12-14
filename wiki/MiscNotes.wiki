@@ -16,7 +16,7 @@ class Model:
     faces = list()
     class Vertex:
         coords = vector()
-        normals = list()
+        normals = list() #sequence of vectors
     class Edge:
         vertices = list() #size=2
         seam = True
@@ -29,4 +29,19 @@ class Model:
     def calculate_normals()
 }}}
 
-In this example, `Model` should be the main class we're working with, only creating `Vertex`, `Edge`, and `Face` objects to add them to a `Model` object as in `Model.vertices.append(Vertex(coords))`.
+In this example, `Model` should be the main class we're working with, only creating `Vertex`, `Edge`, and `Face` objects to add them to a `Model` object as in `Model.vertices.append(Vertex(coords))`.  Assigning vertices to an edge will always take the form `Edge.vertices = [Model.vertices[1],Model.vertices[5]]`.  Example:
+
+{{{
+m = Model()
+for v in vert_list:    #vert_list is a sequence of vectors
+    m.vertices.append(Vertex(v))
+for f in face_list:    #face_list is a 2-d sequence of vertex indices
+    e = Edge()
+    e.vertices = [m.vertices[f[0]],m.vertices[f[1]]
+    m.edges.append(e)
+    e.vertices = [m.vertices[f[1]],m.vertices[f[2]]
+    m.edges.append(e)
+    e.vertices = [m.vertices[f[2]],m.vertices[f[0]]
+    m.edges.append(e)
+    m.faces.append(Face(m.edges[len(m.edges)-4:]))
+}}}
