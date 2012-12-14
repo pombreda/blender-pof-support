@@ -24,6 +24,8 @@ class Model:
         edges = list()
         # __init__() function checks to make sure edges connect
         normal = vector()
+        center = vector()
+        radius = float()
     def make_vert_list()
     def make_face_list()
     def calculate_normals()
