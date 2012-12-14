@@ -1,3 +1,5 @@
+## This file is deprecated.  It's only still here because I haven't had the opportunity to commit its deletion. ##
+
 class RawData:
     """Creates an object that can be read like a file.  Takes any sequence of data as an argument.  May typically be used to pass only a part of a file to a function so that the part of the file can still be read like a file.
     
