@@ -10,7 +10,7 @@ Additional tests should include making sure calculated stuff equals actual value
 Calculating vertex normals can only be done with an edge object with the boolean attribute `seam` or something similar to mark smoothgroups.  Something like:
 
 {{{
-class Model:
+class Mesh:
     vertices = list()
     edges = list()
     faces = list()
@@ -31,10 +31,10 @@ class Model:
     def calculate_normals()
 }}}
 
-In this example, `Model` should be the main class we're working with, only creating `Vertex`, `Edge`, and `Face` objects to add them to a `Model` object as in `Model.vertices.append(Vertex(coords))`.  Assigning vertices to an edge will always take the form `Edge.vertices = [Model.vertices[1],Model.vertices[5]]`.  Example:
+In this example, `Mesh` should be the main class we're working with, only creating `Vertex`, `Edge`, and `Face` objects to add them to a `Mesh` object as in `Mesh.vertices.append(Vertex(coords))`.  Assigning vertices to an edge will always take the form `Edge.vertices = [Mesh.vertices[1],Mesh.vertices[5]]`.  Example:
 
 {{{
-m = Model()
+m = Mesh()
 for v in vert_list:    #vert_list is a sequence of vectors
     m.vertices.append(Vertex(v))
 for f in face_list:    #face_list is a 2-d sequence of vertex indices
