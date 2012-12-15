@@ -22,6 +22,8 @@
     * Face
      * ~~Centroid calculation~~
      * ~~Face normal calculation~~
+    * Edge
+    * Mesh
      * Vertex normals calculation
    * Classes for each chunk
     * ~~Header~~
