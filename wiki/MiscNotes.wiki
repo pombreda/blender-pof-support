@@ -47,3 +47,6 @@ for f in face_list:    #face_list is a 2-d sequence of vertex indices
     m.edges.append(e)
     m.faces.append(Face(m.edges[len(m.edges)-4:]))
 }}}
+
+==Mass and moment of inertia==
+Can we use Blender's weight painting and [http://en.wikipedia.org/wiki/Spieker_center Spieker Center] calculation to calculate the mass, center of mass, and inertia tensor of a full-triangulated mesh?
