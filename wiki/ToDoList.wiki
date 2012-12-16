@@ -19,10 +19,10 @@
    * Helper data types
     * ~~Vector~~
     * ~~Vertex~~
-    * Face
+    * ~~Face~~
      * ~~Centroid calculation~~
      * ~~Face normal calculation~~
-    * Edge
+    * ~~Edge~~
     * Mesh
      * Vertex normals calculation
    * Classes for each chunk
