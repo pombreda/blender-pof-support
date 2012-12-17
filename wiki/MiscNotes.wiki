@@ -48,5 +48,7 @@ for f in face_list:    #face_list is a 2-d sequence of vertex indices
     m.faces.append(Face(m.edges[len(m.edges)-4:]))
 }}}
 
+Something like this works because in Python, all names are treated as references.  If you have `a = Vertex()` and `b = Vertex()` and `c = [a, b]` and you change `a` or `b`, the change will be reflected in `c`.
+
 ==Mass and moment of inertia==
 Can we use Blender's weight painting and [http://en.wikipedia.org/wiki/Spieker_center Spieker Center] calculation to calculate the mass, center of mass, and inertia tensor of a full-triangulated mesh?
