@@ -52,3 +52,11 @@ Something like this works because in Python, all names are treated as references
 
 ==Mass and moment of inertia==
 Can we use Blender's weight painting and [http://en.wikipedia.org/wiki/Spieker_center Spieker Center] calculation to calculate the mass, center of mass, and inertia tensor of a full-triangulated mesh?
+
+==Version 0.1 and speed==
+For the very first test releases, program speed is less important than release speed.  However, a few re-writes for optimization should be made shortly after the first fully-functional releases:
+ * Membership testing with sets and dictionaries is much faster, O(1), than searching sequences, O(n). When testing "a in b", b should be a set or dictionary instead of a list or tuple.
+ * String concatenation is best done with ''.join(seq) which is an O(n) process. In contrast, using the '+' or '+=' operators can result in an O(n**2) process because new strings may be built for each intermediate step. The CPython 2.4 interpreter mitigates this issue somewhat; however, ''.join(seq) remains the best practice.
+ * In functions, local variables are accessed more quickly than global variables, builtins, and attribute lookups. So, it is sometimes worth localizing variable access in inner-loops. For example, the code for random.shuffle() localizes access with the line, random=self.random. That saves the shuffling loop from having to repeatedly lookup self.random. Outside of loops, the gain is minimal and rarely worth it.
+
+Eventually (for v. 1.0 or v. 2.0) a rewrite of the volition module in C or C++ would be nice.  I'd rather not have to use an external module, but if performance does become an issue before a rewrite to C, we might have to use NumPy.
