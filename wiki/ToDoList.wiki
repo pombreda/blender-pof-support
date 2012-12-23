@@ -5,7 +5,7 @@
   * ~~To-do list~~
   * File formats
    * ~~POF~~
-   * BSP
+   * BSP - _Need extra notes_
    * VP
  * Testing
   * Check sample POF file for how vertex normals are arranged (1 per face that uses each vertex?)
@@ -24,7 +24,8 @@
      * ~~Face normal calculation~~
     * ~~Edge~~
     * Mesh
-     * Vertex normals calculation
+     * ~~Vertex normals calculation~~
+     * Vertex normal indexing
    * Classes for each chunk
     * ~~Header~~
     * ~~Textures~~
