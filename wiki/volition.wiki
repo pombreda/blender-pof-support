@@ -45,7 +45,9 @@ Reading a chunk goes like this:
   * `RawData` class
   * `vector()` method analogous to `int()` or `float()`
   * `Vertex` class
+  * `Edge` class
   * `Face` class
+  * `Mesh` class
  * Main POF-handling functions
   * read_pof()
   * write_pof()
@@ -86,8 +88,39 @@ Reading a chunk goes like this:
   * BoundboxBlock
 
 ==SubmodelChunk==
+
+_This section requires cleanup to be accurate according to the latest revision of the code._
+
 This class has four methods in addition to `read()`, `write()`, `__init__()`, `__len__()`, and `__repr__()`.  Upon calling `read()`, the BSP data is parsed into a list of BSP blocks `self.bsp_data`.  Upon calling `write()`, `self.bsp_data` is parsed into a packed BSP tree along with the rest of the chunk.
 
  * `get_vert_list()` reads through `self.bsp_data` and stores `self.vert_list` as a list of `Vertex` objects.  Returns true if successful, raises `InvalidBSPError` if unsuccessful.
  * `get_face_list()` like `get_vert_list()`, but with faces.
  * `make_bsp_tree()` creates a list of BSP blocks `self.bsp_data` using `self.vert_list` and `self.face_list`.  Returns true if successful, raises various exceptions if unsuccessful, depending on the problem.
+
+==Mesh==
+
+This class is designed for use as an intermediary between a POF file's SHLD and SOBJ/OBJ2 chunks and another format such as Blender's internal geometry classes.  The class consists of a list of Vertex objects, a list of Edge objects, a list of Face objects, and methods for retrieving an indexed list of them, generating them from indexed lists, and working with vertex normals.
+
+===Vertices===
+
+Each vertex object is instantiated with a location and, optionally, one or more normals.
+
+===Edges===
+
+Edge objects are instantiated with a list of exactly two Vertex objects and, optionally, a boolean value for whether or not the edge is a seam (analogous to marking an edge as a seam in Blender or the boundary between two smoothing groups in 3DS Max).
+
+===Faces===
+
+Faces are instantiated with a list of Edge objects.  Upon instantiation, the centroid, radius, and normal of the face are calculated.
+
+===calculate_vertex_normals()===
+
+This method first creates several dictionary objects indexing vertices, edges, and faces with each other.  For example:
+{{{
+>>>vei # Vertex-Edge index
+{0:[0, 3, 4, 7, 12], 1:[0, 5, 6, 11], ...}
+# The key is the index of the vertex in the Mesh's vertex list
+# The value is a sequence of edges which use that vertex, indexed to the Mesh's edge list
+}}}
+
+The method then goes through `vei` and, for each edge where `seam == False`, it goes through `efi` of that edge and adds the face's normal to a temporary variable, to be averaged at the end of the list.  For each edge where `seam == True`, the method simply goes through `efi` of that edge and adds a new normal to the vertex which is equal to each of the faces' normal.
