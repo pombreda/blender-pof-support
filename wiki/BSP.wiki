@@ -12,18 +12,23 @@ This document was written by John Slagel from Volition Inc., with revisions and 
 The first byte defines the block now following (0-5, see below). After a block the following byte defines the data of the next block, etc.
 
 *0 - EOF - Means end of tree reached*
-{{{+ 0 int id = 0
-+ 4 int size}}}
+{{{
++ 0 int id = 0
++ 4 int size
+}}}
 *1 - DEFPOINTS - Defines the vertices*
-{{{+ 0 int id = 1
+{{{
++ 0 int id = 1
 + 4 int size
 + 8 int n_verts
 +12 int n_norms
 +16 int offset // from start of chunk to vertex data
 +20 n_verts*char norm_counts
-+offset vertex_data // Each vertex n is a point followed by norm_counts[n] normals.}}}
++offset vertex_data // Each vertex n is a point followed by norm_counts[n] normals.
+}}}
 *2 - FLATPOLY - Flat (non-textured) polygon*
-{{{+ 0 int id = 2
+{{{
++ 0 int id = 2
 + 4 int size 
 + 8 vector normal
 +20 vector center
@@ -36,9 +41,11 @@ The first byte defines the block now following (0-5, see below). After a block t
 for each vertex, i {
  short vertnum[i]
  short normnum[i]
-}}}}
+}
+}}}
 *3 - TMAPPOLY - Textured polygons*
-{{{+ 0 int id = 3
+{{{
++ 0 int id = 3
 + 4 int size
 + 8 vector normal
 +20 vector center
@@ -50,9 +57,11 @@ for each vertex, i {
  ushort normnum[i]
  float u[i]
  float v[i]
-}}}}
+}
+}}}
 *4 - SORTNORM - Sortnorms are planes that split the model recursively*
-{{{+ 0 int id = 4
+{{{
++ 0 int id = 4
 + 4 int size
 + 8 vector plane_normal
 +20 vector plane_point
@@ -63,9 +72,12 @@ for each vertex, i {
 +48 int postlist_offset // Only recurse into this if non-zero.
 +52 int online_offset // Only recurse into this if non-zero.
 +56 vector min_bounding_box_point // of all polys under here
-+68 vector max_bounding_box_point // of all polys under here}}}
++68 vector max_bounding_box_point // of all polys under here
+}}}
 *5 - BOUNDBOX - Bounding boxes are used to speed up lighting and collision calculations.*
-{{{+ 0 int id = 5
+{{{
++ 0 int id = 5
 + 4 int size
 + 8 vector min_point
-+20 vector max_point}}}
++20 vector max_point
+}}}
