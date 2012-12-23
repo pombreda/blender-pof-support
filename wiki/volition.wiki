@@ -124,3 +124,12 @@ This method first creates several dictionary objects indexing vertices, edges, a
 }}}
 
 The method then goes through `vei` and, for each edge where `seam == False`, it goes through `efi` of that edge and adds the face's normal to a temporary variable, to be averaged at the end of the list.  For each edge where `seam == True`, the method simply goes through `efi` of that edge and adds a new normal to the vertex which is equal to each of the faces' normal.
+
+===Vertex normal indexing===
+
+There are a couple ways we could do this:
+
+ * Store the index in each individual Face object.
+ * Store the indices in another list/dictionary indexed into the face list.  (Indexception.)
+
+Either way, with the current implementation of vertex normal calculation, we're going to have to match vertex normals to face normals (`if Face.normal in Vertex.normals` etc.).  It might be prudent to store vertex normals as a dictionary, with the keys simply being integers, as dictionaries are faster for membership testing.
