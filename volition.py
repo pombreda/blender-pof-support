@@ -186,21 +186,6 @@ def unpack_ubyte(bin_data):
         
     return u
     
-# def unpack_char(bin_data):
-
-    # signed byte (alphabetic)
-    
-    # u = bytes()
-    # p = bytes(bin_data)
-    
-    # if len(p) == 1:
-        # u = unpack('c', p)[0]
-        
-    # elif len(p) > 1:
-        # u = list(unpack('{}c'.format(len(p)), p))
-        
-    # return u
-    
 def unpack_short(bin_data):
 
     # signed short
@@ -340,17 +325,6 @@ def pack_ubyte(x):
         p = pack('B', x)
         
     return p
-    
-# def pack_char(x):
-
-    # # unsigned byte, alphabetic
-    
-    # p = bytes()
-    # try:
-        # u = tuple(x)
-        # p = pack('c', u[0])
-        # for i in u[1:]:
-            # p += pack('c', i)
             
 def pack_short(x):
 
@@ -455,6 +429,9 @@ class RawData:
     def __len__(self):
         return len(self.data)
         
+    def __repr__(self):
+        return "<RawData object of length {} at address {}.>".format(len(self.data), self.addr)
+        
     def read(self, length = 0):
         if length == 0:
             return self.data
@@ -507,6 +484,9 @@ class Mesh:
         self.face_list = face_list
         
     def get_vert_list(self):
+    
+        ## TO DO: Localize self.face_list, self.vert_list, self.edge_list
+    
         vert_list = list()
         for v in self.vert_list:
             vert_list.append(v.co)
@@ -514,6 +494,9 @@ class Mesh:
         return vert_list
         
     def set_vert_list(self, vert_list, vert_norms = False):
+    
+        ## TO DO: Localize self.face_list, self.vert_list, self.edge_list
+    
         self.vert_list = list()
         for i in range(len(vert_list)):
             self.vert_list.append(Vertex(vert_list[i]))
@@ -521,6 +504,9 @@ class Mesh:
                 self.vert_list[i].normals = vert_norms[i]
         
     def get_edge_list(self):
+    
+        ## TO DO: Localize self.face_list, self.vert_list, self.edge_list
+    
         edge_list = list()
         for i in range(len(self.edge_list)):
             edge_list.append(list())
@@ -531,11 +517,17 @@ class Mesh:
         return edge_list
         
     def set_edge_list(self, edge_list):
+    
+        ## TO DO: Localize self.face_list, self.vert_list, self.edge_list
+    
         self.edge_list = list()
         for e in edge_list:
             self.edge_list.append(Edge(e[:2], e[2]))
         
     def get_face_list(self, by_edges = False):
+    
+        ## TO DO: Localize self.face_list, self.vert_list, self.edge_list
+    
         face_list = [[], []]
         for i in range(len(self.face_list)):
             face_list[0].append(list())
@@ -555,6 +547,9 @@ class Mesh:
         return face_list
         
     def set_face_list(self, face_list, vert_norms = False, by_edges = False):
+    
+        ## TO DO: Localize self.face_list, self.vert_list, self.edge_list
+        
         self.face_list = list()
         if by_edges:
             for i in range(len(face_list[0])):
@@ -587,11 +582,6 @@ class Mesh:
                 # Why?  I dunno, maybe you want to make a script that will flip the model's x-axis?  Then just flip the x-axis of all the vertices and the edges and faces will follow.
         
     def calculate_normals(self):
-        # Find all adjacent edges and faces
-        # For each adjacent edge, e, where e.seam == True:
-            # Find each face that uses that edge and add a vertex normal parallel to the face's normal
-        # For each adjacent edge, e, where e.seam == False:
-            # Find each face that uses that edge, sum their normals, and divide by the number of faces
         fei = dict()        # face edge index
         fvi = dict()        # face vert index
         
@@ -633,34 +623,36 @@ class Mesh:
                     ve.add(j)
             vei[i] = ve
             vfi[i] = vf
-            
-            # for each edge, e, in vei where !seam:
-                # for each face in efi[e]:
-                    # add the normal
-            # divide by the number of faces and add to vert
-            # for each edge, e, in vei where seam:
-                # for each face in efi[e]:
-                    # add a parallel normal to vert
                     
-            for v, el in vei:
-                smooth_norm_x = 0
-                smooth_norm_y = 0
-                smooth_norm_z = 0
+        for v, el in vei:
+            smooth_norm_x = 0
+            smooth_norm_y = 0
+            smooth_norm_z = 0
+            
+            num_smooth_norms = 0
+            
+            this_vert_norms = set()     # using a set to avoid duplicates - will convert to list() later
+            
+            for e in el:
+                if edges[e].seam:
+                    for f in efi[e]:
+                        smooth_norm_x += faces[f].normal[0]
+                        smooth_norm_y += faces[f].normal[1]
+                        smooth_norm_z += faces[f].normal[2]
+                        num_smooth_norms += 1
+                else:
+                    for f in efi[e]:
+                        this_vert_norms.add(faces[f].normal)
+                        
+            if num_smooth_norms:    # average face normals to get vertex normal
+                smooth_norm_x /= num_smooth_norms
+                smooth_norm_y /= num_smooth_norms
+                smooth_norm_z /= num_smooth_norms
+                this_vert_norms.add(vector(smooth_norm_x, smooth_norm_y, smooth_norm_z))
                 
-                num_smooth_norms = 0
-                
-                sharp_norm_x = 0
-                sharp_norm_y = 0
-                sharp_norm_z = 0
-                
-                for e in el:
-                    if edges[e].seam:
-                        for f in efi[e]:
-                            smooth_norm_x += faces[f].un_normal[0]
-                            smooth_norm_y += faces[f].un_normal[1]
-                            smooth_norm_z += faces[f].un_normal[2]
-                            num_smooth_norms += 1
-                            
+            verts[v].normals = list(this_vert_norms)
+            
+        self.vert_list = verts
         
     def get_vert_normals(format = "mesh"):
         pass
@@ -737,16 +729,6 @@ class Face:
             normal_z += (verts_x[i] - verts_x[(i + 1) % len(verts_x)]) * (verts_y[i] - verts_y[(i + 1) % len(verts_y)])
         self.normal = vector(normal_x, normal_y, normal_z)
         
-        # I hope this is right because I have no idea what I'm doing
-        
-        # normal_mag = sqrt((normal_x - center_x) ** 2 + (normal_y - center_y) ** 2 + (normal_z - center_z) ** 2)
-        
-        # normalized_x = (normal_x - center_x) / normal_mag
-        # normalized_y = (normal_y - center_y) / normal_mag
-        # normalized_z = (normal_z - center_z) / normal_mag
-        
-        # self.normal = vector(normalized_x, normalized_y, normalized_z)
-        
         c_dist = list()
         for i in range(len(vert_list)):
             c_dist.append(sqrt((self.center[0] - verts_x[i]) ** 2 + (self.center[1] - verts_y[i]) ** 2 + (self.center[2] - verts_z[i]) ** 2))
@@ -765,7 +747,7 @@ class HeaderChunk(POFChunk):
     """POF file header chunk.  Defines various metadata about the model.
     
     Methods:
-        read_chunk(bin_data) - takes any Python file object or RawData object and attempts to parse it.  Assumes the chunk header (the chunk ID and length) is NOT included and does no size checking.  Returns True if successful.
+        read_chunk(bin_data) - takes any Python file object or RawData object and attempts to parse it.  Assumes the chunk header (the chunk ID and length) is NOT included and does not size checking.  Returns True if successful.
         write_chunk() - attempts to pack the data in the chunk into a bytes object, which is returned.  This method DOES include the chunk ID and length in the returned data."""
     
     def __init__(self, pof_ver = 2117):
@@ -829,8 +811,9 @@ class HeaderChunk(POFChunk):
     def write_chunk(self):
         
         chunk = self.CHUNK_ID
-        if len(self):
-            chunk += pack_int(len(self))
+        length = len(self)
+        if length:
+            chunk += pack_int(length)
         else:
             return False
         
@@ -916,8 +899,9 @@ class TextureChunk(POFChunk):
         
     def write_chunk(self):
         chunk = self.CHUNK_ID
-        if len(self):
-            chunk += pack_int(len(self))
+        length = len(self)
+        if length:
+            chunk += pack_int(length)
         else:
             return False
         
@@ -947,8 +931,9 @@ class MiscChunk(POFChunk):
         
     def write_chunk(self)
         chunk = self.CHUNK_ID
-        if len(self):
-            chunk += pack_int(len(self))
+        length = len(self)
+        if length:
+            chunk += pack_int(length)
         else:
             return False
         
@@ -1003,8 +988,9 @@ class PathChunk(POFChunk):
                     
     def write_chunk(self):
         chunk = self.CHUNK_ID
-        if len(self):
-            chunk += pack_int(len(self))
+        length = len(self)
+        if length:
+            chunk += pack_int(length)
         else:
             return False
         
@@ -1070,9 +1056,9 @@ class SpecialChunk(POFChunk):
         
     def write_chunk(self):
         chunk = self.CHUNK_ID
-        
-        if len(self):
-            chunk += pack_int(len(self))
+        length = len(self)
+        if length:
+            chunk += pack_int(length)
         else:
             return False
         
@@ -1126,8 +1112,9 @@ class ShieldChunk(POFChunk):
             
     def write_chunk(self):
         chunk = self.CHUNK_ID
-        if len(self):
-            chunk += pack_int(len(self))
+        length = len(self)
+        if length:
+            chunk += pack_int(length)
         else:
             return False
             
