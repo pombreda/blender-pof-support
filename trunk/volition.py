@@ -633,6 +633,34 @@ class Mesh:
                     ve.add(j)
             vei[i] = ve
             vfi[i] = vf
+            
+            # for each edge, e, in vei where !seam:
+                # for each face in efi[e]:
+                    # add the normal
+            # divide by the number of faces and add to vert
+            # for each edge, e, in vei where seam:
+                # for each face in efi[e]:
+                    # add a parallel normal to vert
+                    
+            for v, el in vei:
+                smooth_norm_x = 0
+                smooth_norm_y = 0
+                smooth_norm_z = 0
+                
+                num_smooth_norms = 0
+                
+                sharp_norm_x = 0
+                sharp_norm_y = 0
+                sharp_norm_z = 0
+                
+                for e in el:
+                    if edges[e].seam:
+                        for f in efi[e]:
+                            smooth_norm_x += faces[f].un_normal[0]
+                            smooth_norm_y += faces[f].un_normal[1]
+                            smooth_norm_z += faces[f].un_normal[2]
+                            num_smooth_norms += 1
+                            
         
     def get_vert_normals(format = "mesh"):
         pass
@@ -707,17 +735,17 @@ class Face:
             normal_x += (verts_y[i] - verts_y[(i + 1) % len(verts_y)]) * (verts_z[i] - verts_z[(i + 1) % len(verts_z)])
             normal_y += (verts_z[i] - verts_z[(i + 1) % len(verts_z)]) * (verts_x[i] - verts_x[(i + 1) % len(verts_x)])
             normal_z += (verts_x[i] - verts_x[(i + 1) % len(verts_x)]) * (verts_y[i] - verts_y[(i + 1) % len(verts_y)])
-        self.un_normal = vector(normal_x, normal_y, normal_z)       # un-normalized normal - used for calculating vertex normals
+        self.normal = vector(normal_x, normal_y, normal_z)
         
         # I hope this is right because I have no idea what I'm doing
         
-        normal_mag = sqrt((normal_x - center_x) ** 2 + (normal_y - center_y) ** 2 + (normal_z - center_z) ** 2)
+        # normal_mag = sqrt((normal_x - center_x) ** 2 + (normal_y - center_y) ** 2 + (normal_z - center_z) ** 2)
         
-        normalized_x = (normal_x - center_x) / normal_mag
-        normalized_y = (normal_y - center_y) / normal_mag
-        normalized_z = (normal_z - center_z) / normal_mag
+        # normalized_x = (normal_x - center_x) / normal_mag
+        # normalized_y = (normal_y - center_y) / normal_mag
+        # normalized_z = (normal_z - center_z) / normal_mag
         
-        self.normal = vector(normalized_x, normalized_y, normalized_z)
+        # self.normal = vector(normalized_x, normalized_y, normalized_z)
         
         c_dist = list()
         for i in range(len(vert_list)):
