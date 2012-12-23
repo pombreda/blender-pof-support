@@ -81,3 +81,24 @@ for each vertex, i {
 + 8 vector min_point
 +20 vector max_point
 }}}
+
+==Notes==
+
+The point of a BSP tree is to speed up rendering by splitting a model recursively in two, so that progressively smaller bounding boxes can speed up lighting and visibility calculations.  This is done by recursively bisecting the model and forming a list of polygons in front of the split and a list of polygons behind the split, and forming child nodes from those lists, which are also split.
+
+===A few rules for FreeSpace BSP data===
+ * A `sortnorm` is ALWAYS followed by three End-of-Tree blocks, representing what used to be `prelist`, `postlist`, and `online` when IDTA was an octree rather than a binary tree.
+ * An End-of-Tree block ALWAYS follows a polygon block.
+ * A bounding-box block ALWAYS preceeds a polygon block, to allow for faster lighting and collision calculation, as a leaf node of the BSP tree may contain multiple polygons.
+ * It's unnecessary to designate the end of a branch with an End-of-Tree block, as `sortnorm`s do all the work.
+ * The end of the entire BSP tree is designated by two End-of-Tree blocks following a polygon block.
+
+===About the sortnorm block===
+For one split of the model, two `sortnorm`s are needed.  They may share the same `plane_point`, but must have opposite `plane_normal`s.  The `front_offset` is the byte offset from the beginning of the block to the `sortnorm` of the first child node, and the `back_offset` is the byte offset from the beginning of the block to the `sortnorm` of this node's sibling.  The `prelist_offset`, `postlist_offset`, and `online_offset` should always point to an End-of-Tree block.  (Could we point them to just any EOT block?)
+
+===Determining the front and back polylists===
+ # Determine points ahead of and behind the plane
+ # Find polygons that use ONLY points ahead of the plane, put them in `front_list`
+ # Put all other polygons in `back_list`
+ # Determine bounding boxes for each
+We stop splitting when we reach a level where at least one leaf node will have only one polygon.  We can calculate how many children this will take.
