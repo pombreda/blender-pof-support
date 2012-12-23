@@ -60,3 +60,6 @@ For the very first test releases, program speed is less important than release s
  * In functions, local variables are accessed more quickly than global variables, builtins, and attribute lookups. So, it is sometimes worth localizing variable access in inner-loops. For example, the code for random.shuffle() localizes access with the line, random=self.random. That saves the shuffling loop from having to repeatedly lookup self.random. Outside of loops, the gain is minimal and rarely worth it.
 
 Eventually (for v. 1.0 or v. 2.0) a rewrite of the volition module in C or C++ would be nice.  I'd rather not have to use an external module, but if performance does become an issue before a rewrite to C, we might have to use NumPy.
+
+==Logging==
+The importer and exporter should be able to output a log file containing all the POF data in a human-readable format.
