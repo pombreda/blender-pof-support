@@ -63,3 +63,16 @@ Eventually (for v. 1.0 or v. 2.0) a rewrite of the volition module in C or C++ w
 
 ==Logging==
 The importer and exporter should be able to output a log file containing all the POF data in a human-readable format.
+
+==Main `read_pof()` loop==
+Since Python doesn't do switch-case statements, a dictionary lookup would be nice.  Something like:
+{{{
+chunk_id = get_the_chunk_id(pof_file.read(4))
+chunk_length = get_the_chunk_length(pof_file.read(4))
+chunk_bin = pof_file.read(chunk_length)
+try:
+    chunk = chunk_dict[chunk_id]()
+    chunk.read_chunk(pof_file.read(chunk_length)
+except KeyError:
+    raise FileFormatError(chunk_id, "Unknown chunk detected - this is not a POF file.")
+}}}
