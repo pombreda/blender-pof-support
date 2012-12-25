@@ -5,8 +5,22 @@
   * ~~To-do list~~
   * File formats
    * ~~POF~~
-   * BSP - _Need extra notes_
+   * ~~BSP - _Need extra notes_~~
    * VP
+  * Module documentation
+   * Module classes
+    * Vertex
+    * Edge
+    * Face
+    * Mesh
+    * RawData
+    * Data chunk classes
+   * Module methods
+    * read_pof()
+    * write_pof()
+    * generate_tree_recursion()
+   * Private methods
+    * pack() and unpack() wrappers
  * Testing
   * Check sample POF file for how vertex normals are arranged (1 per face that uses each vertex?)
  * ~~Finish writing bintools module~~ _Anything not included in `struct` will be included in the volition module._
