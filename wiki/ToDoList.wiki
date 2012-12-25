@@ -22,7 +22,7 @@
    * Private methods
     * pack() and unpack() wrappers
  * Testing
-  * Check sample POF file for how vertex normals are arranged (1 per face that uses each vertex?)
+  * ~~Check sample POF file for how vertex normals are arranged (1 per face that uses each vertex?)~~
  * ~~Finish writing bintools module~~ _Anything not included in `struct` will be included in the volition module._
   * ~~short, ushort~~
   * ~~char (signed byte)~~
