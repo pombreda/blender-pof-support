@@ -6,3 +6,7 @@
 After the user selects a file and options, the file is loaded with `pof_file = open(pof_path, 'rb')`.  `volition.read_pof(pof_file)` is then called.  That function iterates through the file with a `while` loop, reading each chunk's ID and length.  The binary chunk data is stuffed into a `RawData` object, and a `try-except` block uses a dictionary to create a class for the chunk from the chunk ID, calling `read_chunk()` for each one.  `volition.read_pof()` returns a set of chunk objects.  The importer script iterates through that set, using another dictionary with a `try-except` block to parse the chunks that have been selected by the user into Blender.  The `try-except` block calls a function for each chunk, passing a dictionary containing the parameters selected when the script was run, to be checked by each function.
 
 ===Parsing mesh data===
+
+The `SHLD` chunk's `read_chunk()` method creates a `Mesh` object and its associated vertex, edge, and face lists as `SHLDChunk.mesh`.  A `Mesh` object can easily be converted to a Blender mesh by iterating through the vertices, edges, and faces.
+
+The subobject chunks' `read_chunk()` method, however, only creates a list of BSP blocks `SOBJChunk.bsp_tree`.  The subobject chunks contain an additional method `create_mesh_from_bsp()` to iterate through the BSP tree and create a `Mesh` object `SOBJChunk.mesh`.
