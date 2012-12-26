@@ -29,7 +29,9 @@
   * ~~vector~~
  * Optimization
   * Localize variables instead of using `self.x`
-  * PEP8 compliance (mostly breaking up long lines using extra variables)
+  * PEP8 compliance
+   * Break up long lines using extra variables
+   * Add extra white space around module methods and classes
  * Finish writing volition module
   * POF utilities
    * BSP tree generator
