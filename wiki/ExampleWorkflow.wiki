@@ -1,14 +1,8 @@
 #summary Example of how the volition module will be used to read and write a POF file.
 #labels Phase-Implementation,Phase-Design
 
-= Introduction =
+==Reading a POF file into Blender==
 
-Add your content here.
+After the user selects a file and options, the file is loaded with `pof_file = open(pof_path, 'rb')`.  `volition.read_pof(pof_file)` is then called.  That function iterates through the file with a `while` loop, reading each chunk's ID and length.  The binary chunk data is stuffed into a `RawData` object, and a `try-except` block uses a dictionary to create a class for the chunk from the chunk ID, calling `read_chunk()` for each one.  `volition.read_pof()` returns a set of chunk objects.  The importer script iterates through that set, using another dictionary with a `try-except` block to parse the chunks that have been selected by the user into Blender.  The `try-except` block calls a function for each chunk, passing a dictionary containing the parameters selected when the script was run, to be checked by each function.
 
-
-= Details =
-
-Add your content here.  Format your content with:
-  * Text in *bold* or _italic_
-  * Headings, paragraphs, and lists
-  * Automatic links to other wiki pages
+===Parsing mesh data===
