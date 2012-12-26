@@ -9,4 +9,4 @@ After the user selects a file and options, the file is loaded with `pof_file = o
 
 The `SHLD` chunk's `read_chunk()` method creates a `Mesh` object and its associated vertex, edge, and face lists as `SHLDChunk.mesh`.  A `Mesh` object can easily be converted to a Blender mesh by iterating through the vertices, edges, and faces.
 
-The subobject chunks' `read_chunk()` method, however, only creates a list of BSP blocks `SOBJChunk.bsp_tree`.  The subobject chunks contain an additional method `create_mesh_from_bsp()` to iterate through the BSP tree and create a `Mesh` object `SOBJChunk.mesh`.
+The subobject chunks' `read_chunk()` method, however, only creates a list of BSP blocks `SOBJChunk.bsp_tree`.  The subobject chunks contain an additional method `create_mesh_from_bsp()` to iterate through the BSP tree and create a `Mesh` object `SOBJChunk.mesh`, assigning `Edge.seam` values according to the arrangement of vertex normals.
