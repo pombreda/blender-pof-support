@@ -72,3 +72,14 @@
  * All the formality of a Blender addon
  * A user interface
  * volition module with VP stuff
+
+==Goals for the far distant future==
+ * Calculate moment of inertia during export
+ * Rewrite module in Cython
+ * Split `volition` package into modules
+  * pof
+  * vp
+  * tbl
+  * ani
+ * Blender addon for mission design
+ * Blender addon for render to ani
