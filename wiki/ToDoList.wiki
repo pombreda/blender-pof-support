@@ -35,7 +35,7 @@
  * Finish writing volition module
   * POF utilities
    * BSP tree generator
-   * Helper data types
+   * ~~Helper data types~~
     * ~~Vector~~
     * ~~Vertex~~
     * ~~Face~~
