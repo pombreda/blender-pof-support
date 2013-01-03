@@ -6,7 +6,7 @@
   * File formats
    * ~~POF~~
    * ~~BSP - _Need extra notes_~~
-   * VP
+   * ~~VP~~
   * Module documentation
    * Module classes
     * Vertex
@@ -28,7 +28,7 @@
   * ~~char (signed byte)~~
   * ~~vector~~
  * Optimization
-  * Localize variables instead of using `self.x`
+  * Localize variables instead of using `self.x` *Need to do this for POF chunks ASAP*
   * PEP8 compliance
    * Break up long lines using extra variables
    * Add extra white space around module methods and classes
@@ -42,15 +42,15 @@
      * ~~Centroid calculation~~
      * ~~Face normal calculation~~
     * ~~Edge~~
-    * Mesh
+    * ~~Mesh~~
      * ~~Vertex normals calculation~~
-     * Vertex normal indexing
+     * ~~Vertex normal indexing~~
    * Classes for each chunk
     * ~~Header~~
     * ~~Textures~~
     * ~~Paths~~
     * ~~Special points~~
-    * Shield mesh
+    * ~~Shield mesh~~
     * Eye points
     * Gun points
     * Turret gun points
