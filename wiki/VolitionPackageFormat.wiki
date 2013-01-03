@@ -1,13 +1,26 @@
-#summary Description of the VP file format.
+#summary VP file format specification.
+#labels Phase-Implementation
 
-= Introduction =
+VP files are made up of three main components; the header, followed by the individual files, and finally the index for the entries.
+==The Header==
+{{{
+char header[4]; //Always "VPVP"
+int version;    //As of this version, still 2.
+int diroffset;  //Offset to the file index
+int direntries; //Number of entries
+}}}
+==The files==
+Files are simply stored in the VP, one right after the other. No spacing or null termination is necessary.
+==The index==
+The index is a series of "direntries"; each directory has the structure, as seen below.
+{{{
+int offset; //Offset of the file data for this entry.
+int size; //Size of the file data for this entry
+char name[32]; //Null-terminated filename, directory name, or ".." for backdir
+int timestamp; //Time the file was last modified, in unix time.
+}}}
 
-Add your content here.
-
-
-= Details =
-
-Add your content here.  Format your content with:
-  * Text in *bold* or _italic_
-  * Headings, paragraphs, and lists
-  * Automatic links to other wiki pages
+Each direntry may be a directory, a file, or a backdir. A directory entry signifies the start of a directory, and has the name entry set to the name of the directory; a backdir has the name of "..", and represents the end of a directory.
+Because there is no type descriptor inherent to the format, directories and backdirs are identified by the "offset", "size", and "timestamp" entries being set to 0.
+All valid VP files should start with the "data" directory as the toplevel.
+Note that it isn't necessary at all to add backdirs at the end of a VP file.
