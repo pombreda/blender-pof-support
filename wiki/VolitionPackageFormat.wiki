@@ -24,3 +24,38 @@ Each direntry may be a directory, a file, or a backdir. A directory entry signif
 Because there is no type descriptor inherent to the format, directories and backdirs are identified by the "offset", "size", and "timestamp" entries being set to 0.
 All valid VP files should start with the "data" directory as the toplevel.
 Note that it isn't necessary at all to add backdirs at the end of a VP file.
+
+==Implementation==
+The module should contain a class `VolitionPackageFile` with attributes for the header and file data.  The class is initialized with a file object or RawData object representing the binary VP file.  The class's constructor reads the index and creates nested dictionary objects representing the directory structure:
+{{{
+vp_file_directory = {
+"data": {
+ "tables": {
+  "ships.tbl": (<RawData object>, timestamp),
+  "species_defs.tbl": (<RawData object>, timestamp),
+  ...
+  },
+ "missions": {
+  "TSM-01a.fs2": (<RawData object>, timestamp),
+  ...
+  },
+ ...
+ }
+}
+}}}
+Files can then be accessed like so: `file = vp_file_directory["data"]["tables"]["ships.tbl"]`
+
+The class will include a method `get_file(self, path)` where `path` is a string formatted like `"data/tables/ships.tbl"`.  Example:
+{{{
+def get_file(self, path, sep='/'):
+  split_path = path.split(sep)
+  prev_dir = vp_file_directory
+  for i, n in split_path:
+    this_dir = prev_dir[n]
+    if i != len(split_path) - 1:
+      prev_dir = this_dir
+    else:
+      return this_dir
+}}}
+
+(Also a similar `set_file(self, path, file_data)` method.)
