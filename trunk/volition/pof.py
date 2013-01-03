@@ -16,8 +16,10 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-## Volition utilities module
+## POF module
 ## Copyright (c) 2012 by Christopher Koch
+
+"""This module contains classes and methods for handling "Parallax Object Format" (POF) files, including geometry helper classes for mesh data."""
 
 ## No guarantees about pep8 compliance
 
@@ -55,8 +57,8 @@
 # make_polylist()
 # generate_tree_recursion()
 
-from struct import *
 from math import fsum, sqrt
+from bintools import *
 
 ## Exceptions ##
 
@@ -141,312 +143,8 @@ class FaceListError(GeometryError):
         
     def __str__(self):
         return "Bad face: {}, {}.".format(self.msg, self.face)
-
-## Helpers ##
-
-# Note for the pack() and unpack() wrappers:
-# u = Unpacked data
-# p = Packed data
-# Mind your p's and u's
-
-## Struct wrappers ##
-
-def unpack_byte(bin_data):
-    """Wrapper function for struct.unpack().  Can accept an iterable of any length and will unpack the contents into a list of integers."""
-    
-    u = int()
-    try:
-        p = bytes(bin_data)
-    except TypeError:
-        p = bytes(bin_data, "utf-8", "ignore")
-    
-    if len(p) == 1:
-        u = unpack('b', p)[0]
         
-    elif len(p) > 1:
-        u = list(unpack('{}b'.format(len(p)), p))
-        
-    return u
-    
-def unpack_ubyte(bin_data):
-    
-    # unsigned byte (numeric)
-    
-    u = int()
-    try:
-        p = bytes(bin_data)
-    except TypeError:
-        p = bytes(bin_data, "utf-8", "ignore")
-    
-    if len(p) == 1:
-        u = unpack('B', p)[0]
-        
-    elif len(p) > 1:
-        u = list(unpack('{}B'.format(len(p)), p))
-        
-    return u
-    
-def unpack_short(bin_data):
-
-    # signed short
-    
-    u = int()
-    try:
-        p = bytes(bin_data)
-    except TypeError:
-        p = bytes(bin_data, "utf-8", "ignore")
-    
-    if len(p) == 2:
-        u = unpack('h', p)[0]
-        
-    elif len(p) > 2 and (len(p) % 2) == 0:
-        u = list(unpack('{}h'.format(len(p) / 2), p))
-        
-    return u
-    
-def unpack_ushort(bin_data):
-
-    # unsigned short
-    
-    u = int()
-    try:
-        p = bytes(bin_data)
-    except TypeError:
-        p = bytes(bin_data, "utf-8", "ignore")
-    
-    if len(p) == 2:
-        u = unpack('H',p)[0]
-        
-    elif len(p) > 2 and (len(p) % 2) == 0:
-        u = list(unpack('{}H'.format(len(p) / 2), p))
-        
-    return u
-    
-def unpack_int(bin_data):
-
-    # signed int32
-    
-    u = int()
-    try:
-        p = bytes(bin_data)
-    except TypeError:
-        p = bytes(bin_data, "utf-8", "ignore")
-    
-    if len(p) == 4:
-        u = unpack('i', p)[0]
-        
-    elif len(p) > 4 and (len(p) % 4) == 0:
-        u = list(unpack('{}i'.format(len(p) / 4), p))
-        
-    return u
-    
-def unpack_uint(bin_data):
-
-    # unsigned int32
-    
-    u = int()
-    try:
-        p = bytes(bin_data)
-    except TypeError:
-        p = bytes(bin_data, "utf-8", "ignore")
-    
-    if len(p) == 4:
-        u = unpack('I', p)[0]
-        
-    elif len(p) > 4 and (len(p) % 4) == 0:
-        u = list(unpack('{}I'.format(len(p) / 4), p))
-        
-    return u
-    
-def unpack_float(bin_data):
-
-    # float
-    
-    u = float()
-    try:
-        p = bytes(bin_data)
-    except TypeError:
-        p = bytes(bin_data, "utf-8", "ignore")
-    
-    if len(p) == 4:
-        u = unpack('f', p)
-        
-    elif len(p) > 4 and (len(p) % 4) == 0:
-        u = list(unpack('{}f'.format(len(p) / 4), p))
-        
-    return u
-    
-def unpack_vector(bin_data):
-
-    # tuple of three floats
-    
-    u = tuple()
-    try:
-        p = bytes(bin_data)
-    except TypeError:
-        p = bytes(bin_data, "utf-8", "ignore")
-    
-    if len(p) == 12:
-        u = unpack('3f', p)
-        
-    elif len(p) > 12 and (len(p) % 12) == 0:
-        u = list()
-        for i in range(len(p) / 12):
-            u.append(unpack('3f', p[i * 12:i * 12 + 12]))
-            
-    return tuple(u)
-    
-def pack_byte(x):
-    
-    # signed byte
-    
-    p = bytes()
-    try:
-        u = tuple(x)
-        p = pack('b', u[0])
-        for i in u[1:]:
-            p += pack('b', i)
-    except TypeError:
-        p = pack('b', x)
-    
-    return p
-    
-def pack_ubyte(x):
-
-    # unsigned byte
-    
-    p = bytes()
-    try:
-        u = tuple(x)
-        p = pack('B', u[0])
-        for i in u[1:]:
-            p += pack('b', i)
-    except TypeError:
-        p = pack('B', x)
-        
-    return p
-            
-def pack_short(x):
-
-    # signed short
-    
-    p = bytes()
-    try:
-        u = tuple(x)
-        p = pack('h', u[0])
-        for i in u[1:]:
-            p += pack('h', i)
-    except TypeError:
-        p = pack('h', x)
-        
-    return p
-    
-def pack_ushort(x):
-
-    # unsigned short
-    
-    p = bytes()
-    try:
-        u = tuple(x)
-        p = pack('H', u[0])
-        for i in u[1:]:
-            p += pack('H', i)
-    except TypeError:
-        p = pack('H', x)
-        
-    return p
-    
-def pack_int(x):
-
-    # signed int32
-    
-    p = bytes()
-    try:
-        u = tuple(x)
-        p = pack('i', u[0])
-        for i in u[1:]:
-            p += pack('i', i)
-    except TypeError:
-        p = pack('i', x)
-        
-    return p
-    
-def pack_uint(x):
-
-    # unsigned int32
-    
-    p = bytes()
-    try:
-        u = tuple(x)
-        p = pack('I', u[0])
-        for i in u[1:]:
-            p += pack('I', i)
-    except TypeError:
-        p = pack('I', x)
-        
-    return p
-    
-def pack_float(x):
-
-    # float
-    
-    p = bytes()
-    try:
-        u = tuple(x)
-        p = pack('f', u[0])
-        for i in u[1:]:
-            p += pack('f', i)
-    except TypeError:
-        p = pack('f', x)
-        
-    return p
-    
-def pack_string(x):
-
-    # int with length of string followed by chars
-    
-    u = bytes(x)
-    p = pack('i', len(u))
-    p += u
-    
-    return p
-    
-## RawData and geometric objects ##
-    
-class RawData:
-
-    ## May be deprecated if we can use a Python file object faster
-
-    """Creates an object that can be read like a file.  Takes any sequence of data as an argument.  May typically be used to pass only a part of a file to a function so that the part of the file can still be read like a file.
-    
-    Methods:
-        read(length = 0) -- Returns a slice of data from the current address to the current address plus length.  Increases current address by length.  If length is 0 or not provided, returns the entire data.
-        seek(new_addr[, whence = 0]) -- Changes the current address.  If whence is 0, new_addr is bytes from beginning; if whence is 1, new_addr is bytes from current address; if whence is 2, new_addr is bytes from end."""
-    def __init__(self, data):
-        self.data = data
-        self.addr = 0
-        
-    def __len__(self):
-        return len(self.data)
-        
-    def __repr__(self):
-        return "<RawData object of length {} at address {}.>".format(len(self.data), self.addr)
-        
-    def read(self, length = 0):
-        if length == 0:
-            return self.data
-        else:
-            out = self.data[self.addr:self.addr + length]
-            self.addr += length
-            return out
-            
-    def seek(self, new_addr, whence = 0):
-        if whence == 1:
-            self.addr += new_addr
-        elif whence == 2:
-            self.addr = len(self.data) - new_addr
-        else:
-            self.addr = new_addr
+## Helper types ##
             
 def vector(x = False, y = False, z = False):
     """A sequence of floats.  Returns a tuple.
@@ -483,6 +181,16 @@ class Mesh:
         self.edge_list = edge_list
         self.face_list = face_list
         
+        try:
+            self._make_index()
+        except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
+            self._fei = False
+            self._fvi = False
+            self._evi = False
+            self._efi = False
+            self._vfi = False
+            self._vei = False
+        
     def get_vert_list(self):
     
         ## TO DO: Localize self.face_list, self.vert_list, self.edge_list
@@ -502,6 +210,16 @@ class Mesh:
             self.vert_list.append(Vertex(vert_list[i]))
             if vert_norms:
                 self.vert_list[i].normals = vert_norms[i]
+                
+        try:
+            self._make_index()
+        except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
+            self._fei = False
+            self._fvi = False
+            self._evi = False
+            self._efi = False
+            self._vfi = False
+            self._vei = False
         
     def get_edge_list(self):
     
@@ -523,6 +241,16 @@ class Mesh:
         self.edge_list = list()
         for e in edge_list:
             self.edge_list.append(Edge(e[:2], e[2]))
+            
+        try:
+            self._make_index()
+        except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
+            self._fei = False
+            self._fvi = False
+            self._evi = False
+            self._efi = False
+            self._vfi = False
+            self._vei = False
         
     def get_face_list(self, by_edges = False):
     
@@ -580,16 +308,32 @@ class Mesh:
                 self.face_list.append(Face([self.edge_list[self.edge_list.index(edge_a)], self.edge_list[self.edge_list.index(edge_b)], self.edge_list[self.edge_list.index(edge_c)]]))
                 # the pont being that if we modify, say, the position of a vertex, the change will be reflected in the edges and faces, too.
                 # Why?  I dunno, maybe you want to make a script that will flip the model's x-axis?  Then just flip the x-axis of all the vertices and the edges and faces will follow.
+                
+        try:
+            self._make_index()
+        except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
+            self._fei = False
+            self._fvi = False
+            self._evi = False
+            self._efi = False
+            self._vfi = False
+            self._vei = False
         
     def calculate_normals(self):
-        fei = dict()        # face edge index
-        fvi = dict()        # face vert index
+        fei = self._fei        # face edge index
+        fvi = self._fvi        # face vert index
         
-        evi = dict()        # edge vert index
-        efi = dict()        # edge face index
+        evi = self._evi        # edge vert index
+        efi = self._efi        # edge face index
         
-        vfi = dict()        # vert face index
-        vei = dict()        # vert edge index
+        vfi = self._vfi        # vert face index
+        vei = self._vei        # vert edge index
+        
+        if not fei or not fvi or not evi or not efi or not vfi or not vei:
+            try:
+                self._make_index()
+            except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
+                raise GeometryError(None, "Incomplete geometry - can't make index.")
         
         faces = self.face_list
         edges = self.edge_list
@@ -652,10 +396,70 @@ class Mesh:
                 
             verts[v].normals = list(this_vert_norms)
             
+        # assign vert norm index to faces
+                
+        for v, fl in vfi:
+            for f in fl:
+                cur_vert_idx = fvi[f].index(v)
+                for e in fei[f]:
+                    if edges[e].seam:
+                        faces[f].vert_norms[cur_vert_idx] = verts[v].normals.index(faces[f].normal)
+                    else:
+                        faces[f].vert_norms[cur_vert_idx] = len(verts[v].normals) - 1
+            
         self.vert_list = verts
+        self.face_list = faces
+        self.edge_list = edges
         
-    def get_vert_normals(format = "mesh"):
-        pass
+    def _make_index(self):
+        fei = dict()        # face edge index
+        fvi = dict()        # face vert index
+        
+        evi = dict()        # edge vert index
+        efi = dict()        # edge face index
+        
+        vfi = dict()        # vert face index
+        vei = dict()        # vert edge index
+        
+        faces = self.face_list
+        edges = self.edge_list
+        verts = self.vert_list
+        
+        for i in len(faces):        
+            fe = set()     # list of indices
+            fv = set()      # set of indices
+            for e in faces[i].edges:
+                fe.add(edges.index(e))
+                fv.add(verts.index(e.verts[0]), verts.index(e.verts[1]))
+            fei[i] = fe
+            fvi[i] = fv
+            
+        for i in len(edges):
+            evi[i] = set(verts.index(edges[i].verts[0]), verts.index(edges[i].verts[1])
+            ef = set()
+            for j, k in fei:
+                if i in k:
+                    ef.add(j)
+            efi[i] = ef
+            
+        for i in len(verts):
+            ve = set()
+            vf = set()
+            for j, k in evi:
+                if i in k:
+                    ve.add(j)
+            for j, k in fvi:
+                if i in k:
+                    ve.add(j)
+            vei[i] = ve
+            vfi[i] = vf
+            
+        self._fei = fei
+        self._fvi = fvi
+        self._evi = evi
+        self._efi = efi
+        self._vfi = vfi
+        self._vei = vei
         
 class Vertex:
     """A Vertex object.
@@ -733,6 +537,8 @@ class Face:
         for i in range(len(vert_list)):
             c_dist.append(sqrt((self.center[0] - verts_x[i]) ** 2 + (self.center[1] - verts_y[i]) ** 2 + (self.center[2] - verts_z[i]) ** 2))
         self.radius = max(c_dist)
+        
+        self.vert_norms = [0, 0, 0]     # indexed into Mesh.fvi
             
 ## POF chunks ##
 
