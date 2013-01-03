@@ -938,6 +938,15 @@ class ShieldChunk(POFChunk):
             
         return chunk
         
+    def get_mesh(self):
+        """Returns a mesh object created from the chunk data."""
+        
+        pass
+        
+    def set_mesh(self, mesh):
+        """Creates chunk data from a mesh object."""
+        pass
+        
     def __len__(self):
         try:
             chunk_length = 8
