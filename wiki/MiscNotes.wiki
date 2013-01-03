@@ -61,8 +61,10 @@ For the very first test releases, program speed is less important than release s
 
 Eventually (for v. 1.0 or v. 2.0) a rewrite of the volition module in C or C++ would be nice.  I'd rather not have to use an external module, but if performance does become an issue before a rewrite to C, we might have to use NumPy.
 
+In the mean time, the exporter will be built from the beginning to be multi-threaded, getting the number of threads from Blender.
+
 ==Logging==
-The importer and exporter should be able to output a log file containing all the POF data in a human-readable format.
+The importer and exporter should be able to output a log file containing all the POF data in a human-readable format.  We'll use the built-in `logging` module.
 
 ==Main `read_pof()` loop==
 Since Python doesn't do switch-case statements, a dictionary lookup would be nice.  Something like:
@@ -76,3 +78,12 @@ try:
 except KeyError:
     raise FileFormatError(chunk_id, "Unknown chunk detected - this is not a POF file.")
 }}}
+
+==PINF data==
+The exporter will provide a field for custom PINF data (e.g. for a copyright statement).  After the custom PINF data, the exporter will write the following null-terminated strings:
+{{{
+"Exported from Blender {}, using exporter version {}, with volition package version {}".format(blender_version, exporter_version, volition_version)
+"Max BSP depth was {}. Most polys in a single node was {}".format(max_bsp_depth, most_polys)
+"Total compile time was {}ms, tree generation time was {}ms".format(pof_time, bsp_time)
+}}}
+Timing information will be calculated using a series of calls to `datetime.now()` and getting the time difference.
