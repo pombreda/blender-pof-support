@@ -573,6 +573,21 @@ class Face:
         self.radius = max(c_dist)
         
         self.vert_norms = [0, 0, 0]     # indexed into Mesh.fvi
+        
+    def __eq__(self, other):
+        if self.edges == other.edges:
+            return True
+        else:
+            return False
+            
+    def __hash__(self):
+        return self.edges
+        
+    def __repr__(self):
+        return "<volition.Face object with edges {}>".format(str(self.edges))
+        
+    def __str__(self):
+        return str(self.edges)
             
 ## POF chunks ##
 
