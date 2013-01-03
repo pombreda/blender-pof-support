@@ -169,10 +169,10 @@ class Mesh:
     Methods:
         get_vert_list() - parses self.vert_list and returns a list of vertex coordinates
         set_vert_list(vert_list, vert_norms = False) - parses a list of vertex coordinates and, optionally, a list of vertex normals to self.vert_list
-        get_edge_list() - parses self.edge_list and returns a list in the format [[u0, v0, s0], [u1, v1, s1], ...], where ui and vi are indexed into self.vert_list and sx is the boolean seam value
+        get_edge_list() - parses self.edge_list and returns a list in the format [[u0, v0, s0], [u1, v1, s1], ...], where ui and vi are indexed into self.vert_list and si is the boolean seam value
         set_edge_list(edge_list) - parses a list in the same format as returned by get_edge_list() to self.edge_list
         get_face_list(by_edges = False) - parses self.face_list and returns a list in the format [[vert_idx], [face_norms]] or, if by_edges is True, [[edge_idx], [face_norms]]
-        set_face_list(face_list, vert_norms = False, by_edges = False) - parses a list in the same format as returned by get_face_list() to self.face_list
+        set_face_list(face_list, vert_norms = False, by_edges = False) - parses a list of faces where each face is either a vert index or an edge index
         calculate_normals() - calculates vertex normals for all the objects in vert_list, edge_list, and face_list
         get_vert_normals(format = "vertex") - returns a list of vertex normals indexed to the mesh's vert list or, optionally, the edge list's or face list's vertex lists
     """
@@ -192,24 +192,26 @@ class Mesh:
             self._vei = False
         
     def get_vert_list(self):
-    
-        ## TO DO: Localize self.face_list, self.vert_list, self.edge_list
+        """Returns a list of vertex coordinates."""
     
         vert_list = list()
-        for v in self.vert_list:
+        verts = self.vert_list
+        for v in verts:
             vert_list.append(v.co)
             
         return vert_list
         
     def set_vert_list(self, vert_list, vert_norms = False):
-    
-        ## TO DO: Localize self.face_list, self.vert_list, self.edge_list
-    
-        self.vert_list = list()
-        for i in range(len(vert_list)):
-            self.vert_list.append(Vertex(vert_list[i]))
-            if vert_norms:
-                self.vert_list[i].normals = vert_norms[i]
+        """Takes a list of vertex coordinates and creates a set of Vertex objects."""
+                
+        verts = set()
+        if vert_norms:
+            for i, v in vert_list:
+                verts.add(Vertex(v, vert_norms[i]))
+        else:
+            for v in vert_list:
+                verts.add(Vertex(v))
+        self.vert_list = verts
                 
         try:
             self._make_index()
@@ -222,25 +224,26 @@ class Mesh:
             self._vei = False
         
     def get_edge_list(self):
-    
-        ## TO DO: Localize self.face_list, self.vert_list, self.edge_list
-    
-        edge_list = list()
-        for i in range(len(self.edge_list)):
-            edge_list.append(list())
-            edge_list[i].append(self.vert_list.index(self.edge_list[i].verts[0]))
-            edge_list[i].append(self.vert_list.index(self.edge_list[i].verts[1]))
-            edge_list[i].append(self.edge_list[i].seam)
+            
+        if not self._evi:
+            try:
+                self._make_index()
+            except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
+                raise GeometryError(None, "Incomplete geometry - can't make index.")
+                
+        edge_list = self._evi.values()
+        
+        edges = self.edge_list
+        for i, e in enumerate(edges):
+            edge_list[i].append(e.seam)
             
         return edge_list
         
     def set_edge_list(self, edge_list):
-    
-        ## TO DO: Localize self.face_list, self.vert_list, self.edge_list
-    
-        self.edge_list = list()
+            
+        edges = set()
         for e in edge_list:
-            self.edge_list.append(Edge(e[:2], e[2]))
+            edges.add(Edge(e[:2], e[2]))
             
         try:
             self._make_index()
@@ -253,61 +256,59 @@ class Mesh:
             self._vei = False
         
     def get_face_list(self, by_edges = False):
-    
-        ## TO DO: Localize self.face_list, self.vert_list, self.edge_list
-    
-        face_list = [[], []]
-        for i in range(len(self.face_list)):
-            face_list[0].append(list())
-            if by_edges:
-                for j in range(len(self.face_list[i].edges)):
-                    face_list[0][i].append(self.edge_list.index(self.face_list[i].edges[j]))
-            else:
-                for e in self.face_list[i].edges:
-                    vert_idx = self.vert_list.index(e.verts[0])
-                    if vert_idx not in face_list[0][i]:
-                        face_list[0][i].append(vert_idx)
-                    vert_idx = self.vert_list.index(e.verts[1])
-                    if vert_idx not in face_list[0][i]:
-                        face_list[0][i].append(vert_idx)
-            face_list[1].append(self.face_list[i].normal)
+            
+        if not self._fei or not self._fvi:
+            try:
+                self._make_index()
+            except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
+                raise GeometryError(None, "Incomplete geometry - can't make index.")
+                
+        if by_edges:
+            face_list = [self._fei.values(), []]
+        else:
+            face_list = [self._fvi.values(), []]
+            
+        faces = self.face_list
+        for f in faces:
+            face_list[1].append(f.normal)
             
         return face_list
         
-    def set_face_list(self, face_list, vert_norms = False, by_edges = False):
-    
-        ## TO DO: Localize self.face_list, self.vert_list, self.edge_list
+    def set_face_list(self, face_list, by_edges = False):
+                
+        faces = set()
         
-        self.face_list = list()
+        # We want to support both by_edges and !by_edges
+        # because the face list will be by edges when
+        # exporting, but by verts when importing.
+        
         if by_edges:
-            for i in range(len(face_list[0])):
-                edge_list = list()
-                for e in face_list[0][i]:
-                    edge_list.append(self.edge_list[e])
-                self.face_list.append(Face(edge_list))
-        else:   # go through vert list, make edges
-                # assumes mesh is fully triangulated
-            for i in range(len(face_list[0])):
-                try:
-                    edge_a = self.edge_list[index(Edge(self.vert_list[face_list[0][i][0]], self.vert_list[face_list[0][i][1]]))]
-                except ValueError:  # Edge doesn't exist in self.edge_list, so we need to add it
-                    edge_a = Edge(self.vert_list[face_list[0][i][0]], self.vert_list[face_list[0][i][1]])
-                    self.edge_list.append(edge_a)
-                try:
-                    edge_b = self.edge_list[index(Edge(self.vert_list[face_list[0][i][1]], self.vert_list[face_list[0][i][2]]))]
-                except ValueError:
-                    edge_b = Edge(self.vert_list[face_list[0][i][1]], self.vert_list[face_list[0][i][2]])
-                    self.edge_list.append(edge_b)
-                try:
-                    edge_c = self.edge_list[index(Edge(self.vert_list[face_list[0][i][2]], self.vert_list[face_list[0][i][0]]))]
-                except ValueError:
-                    edge_c = Edge(self.vert_list[face_list[0][i][2]], self.vert_list[face_list[0][i][0]])
-                    self.edge_list.append(edge_c)
-                    
-                # making this more complicated than it needs to be so that all the faces in self.face_list reference edges in self.edge_list
-                self.face_list.append(Face([self.edge_list[self.edge_list.index(edge_a)], self.edge_list[self.edge_list.index(edge_b)], self.edge_list[self.edge_list.index(edge_c)]]))
-                # the pont being that if we modify, say, the position of a vertex, the change will be reflected in the edges and faces, too.
-                # Why?  I dunno, maybe you want to make a script that will flip the model's x-axis?  Then just flip the x-axis of all the vertices and the edges and faces will follow.
+            edges = list(self.edge_list)
+            for i, f in face_list:
+                edge_a = edges[f[0]]
+                edge_b = edges[f[1]]
+                edge_c = edges[f[2]]
+                faces.add(Face([edge_a, edge_b, edge_c]))
+        else:
+            verts = list(self.vert_list)
+            edges = self.edge_list
+            for i, f in face_list:
+                edge_a_verts = (verts[f[0]], verts[f[1]])
+                edge_b_verts = (verts[f[1]], verts[f[2]])
+                edge_c_verts = (verts[f[2]], verts[f[0]])
+                
+                edge_a = Edge(edge_a_verts)
+                edge_b = Edge(edge_b_verts)
+                edge_c = Edge(edge_c_verts)
+                
+                edges.add(edge_a)
+                edges.add(edge_b)
+                edges.add(edge_c)
+                
+                faces.add(Face([edge_a, edge_b, edge_c]))
+                self.edge_list = edges
+                
+        self.face_list = faces
                 
         try:
             self._make_index()
@@ -320,6 +321,10 @@ class Mesh:
             self._vei = False
         
     def calculate_normals(self):
+    
+        # This should be called during export, where we have seam values
+        # This should not be called during import, where we already have vertex normals
+    
         fei = self._fei        # face edge index
         fvi = self._fvi        # face vert index
         
@@ -472,6 +477,21 @@ class Vertex:
         if norms:
             self.normals = list(norms)
             
+    def __eq__(self, other):
+        if self.co == other.co:
+            return True
+        else:
+            return False
+            
+    def __hash__(self):
+        return self.co
+        
+    def __repr__(self):
+        return "<volition.Vertex object with coords {}>".format(self.co)
+        
+    def __str__(self):
+        return str(self.co)
+            
 class Edge:
     def __init__(self, verts, seam = True):
         if not isinstance(verts[0], Vertex) or not isinstance(verts[1], Vertex) or len(verts) != 2:
@@ -480,6 +500,21 @@ class Edge:
             self.verts = verts
             self.seam = seam
             self.length = sqrt((verts[1].co[0] - verts[0].co[0]) ** 2 + (verts[1].co[1] - verts[0].co[1]) ** 2 + (verts[1].co[2] - verts[0].co[2]) ** 2)
+            
+    def __eq__(self, other):
+        if self.verts == other.verts:
+            return True
+        else:
+            return False
+            
+    def __hash__(self):
+        return self.verts
+        
+    def __repr__(self):
+        return "<volition.Edge object with vertices {}>".format(str(self.verts))
+        
+    def __str__(self):
+        return str(self.verts)
             
 class Face:
     def __init__(self, edge_list):
@@ -518,7 +553,6 @@ class Face:
                 verts_z.append(e.verts[1].co[2])
                 
         # This assumes polygon is a triangle
-        ## TO DO: calculate centroid for arbitrary polygon
         center_x = 1/3 * fsum(verts_x)
         center_y = 1/3 * fsum(verts_y)
         center_z = 1/3 * fsum(verts_z)
@@ -941,11 +975,40 @@ class ShieldChunk(POFChunk):
     def get_mesh(self):
         """Returns a mesh object created from the chunk data."""
         
-        pass
+        shld_mesh = Mesh()
+        shld_mesh.set_vert_list(self.vert_pos)
+        shld_mesh.set_face_list([self.face_verts, self.face_normals])
+        return shld_mesh
         
-    def set_mesh(self, mesh):
+    def set_mesh(self, m):
         """Creates chunk data from a mesh object."""
-        pass
+        
+        self.num_verts = len(m.vert_list)
+        self.vert_pos = m.get_vert_list()
+        
+        self.num_faces = len(m.face_list)
+        faces = m.get_face_list()
+        self.face_verts = faces[0]
+        self.face_normals = faces[1]
+        
+        efi = m._efi
+        fei = m._fei
+        
+        # I know it looks like a big, ugly, nested loop, but remember that:
+        # shield meshes only have 80 faces (length of fei)
+        # faces only have 3 edges (length of f1)
+        # and edges can only be used by 2 faces (length of efi[e])
+        # so this takes almost no time at all
+        
+        face_neighbors = list()
+        for i, f1 in fei:
+            face_neighbors.append(list())
+            for e in f1:
+                for f2 in efi[e]:
+                    if f2 != i:
+                        face_neighbors[i].append(f2)
+                        
+        self.face_neighbors = face_neighbors
         
     def __len__(self):
         try:
