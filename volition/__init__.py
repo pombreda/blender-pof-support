@@ -32,3 +32,20 @@ __all__ = ["pof", "vp"]
 # pcx
 ## but not:
 # bintools
+
+class VolitionError(Exception):
+    """Base class for exceptions in this module."""
+    pass
+
+class FileFormatError(VolitionError):
+    """Exception raised for invalid filetype errors.
+
+    Attributes:
+        path -- the filepath of the invalid file
+        msg  -- a message"""
+    def __init__(self, path, msg):
+        self.path = path
+        self.msg = msg
+        
+    def __str__(self):
+        return "Invalid filetype: {}, {}.".format(self.msg, self.path)

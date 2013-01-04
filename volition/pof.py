@@ -59,25 +59,9 @@
 
 from math import fsum, sqrt
 from bintools import *
+from . import VolitionError, FileFormatError
 
 ## Exceptions ##
-
-class VolitionError(Exception):
-    """Base class for exceptions in this module."""
-    pass
-
-class FileFormatError(VolitionError):
-    """Exception raised for invalid filetype errors.
-
-    Attributes:
-        path -- the filepath of the invalid file
-        msg  -- a message"""
-    def __init__(self, path, msg):
-        self.path = path
-        self.msg = msg
-        
-    def __str__(self):
-        return "Invalid filetype: {}, {}.".format(self.msg, self.path)
         
 class InvalidChunkError(VolitionError):
     """Exception raised for invalid chunk data.
@@ -206,8 +190,8 @@ class Mesh:
                 
         verts = set()
         if vert_norms:
-            for i, v in vert_list:
-                verts.add(Vertex(v, vert_norms[i]))
+            for v, n in zip(vert_list, vert_norms):
+                verts.add(Vertex(v, n))
         else:
             for v in vert_list:
                 verts.add(Vertex(v))
@@ -284,7 +268,7 @@ class Mesh:
         
         if by_edges:
             edges = list(self.edge_list)
-            for i, f in face_list:
+            for f in face_list:
                 edge_a = edges[f[0]]
                 edge_b = edges[f[1]]
                 edge_c = edges[f[2]]
@@ -292,7 +276,7 @@ class Mesh:
         else:
             verts = list(self.vert_list)
             edges = self.edge_list
-            for i, f in face_list:
+            for f in face_list:
                 edge_a_verts = (verts[f[0]], verts[f[1]])
                 edge_b_verts = (verts[f[1]], verts[f[2]])
                 edge_c_verts = (verts[f[2]], verts[f[0]])
@@ -343,35 +327,6 @@ class Mesh:
         faces = self.face_list
         edges = self.edge_list
         verts = self.vert_list
-        
-        for i in len(faces):        
-            fe = set()     # list of indices
-            fv = set()      # set of indices
-            for e in faces[i].edges:
-                fe.add(edges.index(e))
-                fv.add(verts.index(e.verts[0]), verts.index(e.verts[1]))
-            fei[i] = fe
-            fvi[i] = fv
-            
-        for i in len(edges):
-            evi[i] = set(verts.index(edges[i].verts[0]), verts.index(edges[i].verts[1])
-            ef = set()
-            for j, k in fei:
-                if i in k:
-                    ef.add(j)
-            efi[i] = ef
-            
-        for i in len(verts):
-            ve = set()
-            vf = set()
-            for j, k in evi:
-                if i in k:
-                    ve.add(j)
-            for j, k in fvi:
-                if i in k:
-                    ve.add(j)
-            vei[i] = ve
-            vfi[i] = vf
                     
         for v, el in vei:
             smooth_norm_x = 0
@@ -430,17 +385,17 @@ class Mesh:
         edges = self.edge_list
         verts = self.vert_list
         
-        for i in len(faces):        
+        for i, f in enumerate(faces):        
             fe = set()     # list of indices
             fv = set()      # set of indices
-            for e in faces[i].edges:
+            for e in f.edges:
                 fe.add(edges.index(e))
                 fv.add(verts.index(e.verts[0]), verts.index(e.verts[1]))
             fei[i] = fe
             fvi[i] = fv
             
-        for i in len(edges):
-            evi[i] = set(verts.index(edges[i].verts[0]), verts.index(edges[i].verts[1])
+        for i, e in enumerate(edges):
+            evi[i] = set(verts.index(e.verts[0]), verts.index(e.verts[1])
             ef = set()
             for j, k in fei:
                 if i in k:
@@ -539,7 +494,7 @@ class Face:
         verts_x = list()
         verts_y = list()
         verts_z = list()
-        vert_list = list()
+        vert_list = set()
         for e in edge_list:
             if e.verts[0] not in vert_list:
                 vert_list.append(e.verts[0])
@@ -561,14 +516,15 @@ class Face:
         normal_x = 0.0
         normal_y = 0.0
         normal_z = 0.0
-        for i in range(len(vert_list)):
-            normal_x += (verts_y[i] - verts_y[(i + 1) % len(verts_y)]) * (verts_z[i] - verts_z[(i + 1) % len(verts_z)])
-            normal_y += (verts_z[i] - verts_z[(i + 1) % len(verts_z)]) * (verts_x[i] - verts_x[(i + 1) % len(verts_x)])
-            normal_z += (verts_x[i] - verts_x[(i + 1) % len(verts_x)]) * (verts_y[i] - verts_y[(i + 1) % len(verts_y)])
+        num_verts = len(vert_list)
+        for i in range(num_verts):
+            normal_x += (verts_y[i] - verts_y[(i + 1) % num_verts]) * (verts_z[i] - verts_z[(i + 1) % num_verts])
+            normal_y += (verts_z[i] - verts_z[(i + 1) % num_verts]) * (verts_x[i] - verts_x[(i + 1) % num_verts])
+            normal_z += (verts_x[i] - verts_x[(i + 1) % num_verts]) * (verts_y[i] - verts_y[(i + 1) % num_verts])
         self.normal = vector(normal_x, normal_y, normal_z)
         
         c_dist = list()
-        for i in range(len(vert_list)):
+        for i in range(num_verts):
             c_dist.append(sqrt((self.center[0] - verts_x[i]) ** 2 + (self.center[1] - verts_y[i]) ** 2 + (self.center[2] - verts_z[i]) ** 2))
         self.radius = max(c_dist)
         
@@ -627,39 +583,41 @@ class HeaderChunk(POFChunk):
         self.max_bounding = unpack_vector(bin_data.read(12))
         
         self.num_detail_levels = unpack_int(bin_data.read(4))
-        self.sobj_detail_levels = list()
+        sobj_detail_levels = list()
         for i in range(self.num_detail_levels):
-            self.sobj_detail_levels.append(unpack_int(bin_data.read(4)))
+            sobj_detail_levels.append(unpack_int(bin_data.read(4)))
+        self.sobj_detail_levels = sobj_detail_levels
             
         self.num_debris = unpack_int(bin_data.read(4))
-        self.sobj_debris = list()
+        sobj_debris = list()
         for i in range(self.num_debris):
-            self.sobj_debris.append(unpack_int(bin_data.read(4)))
+            sobj_debris.append(unpack_int(bin_data.read(4)))
+        self.sobj_debris = sobj_debris
             
         if self.pof_ver >= 1903:
             self.mass = unpack_float(bin_data.read(4))
             self.mass_center = unpack_vector(bin_data.read(12))
-            self.inertia_tensor = list()
-            for i in range(3):
-                self.inertia_tensor.append(list())
-                for j in range(3):
-                    self.inertia_tensor[i].append(unpack_float(bin_data.read(4)))
+            self.inertia_tensor = unpack_vector(bin_data.read(36))
         
         if self.pof_ver >= 2014:
             self.num_cross_sections = unpack_int(bin_data.read(4))
-            self.cross_section_depth = list()
-            self.cross_section_radius = list()
+            cross_section_depth = list()
+            cross_section_radius = list()
             for i in range(self.num_cross_sections):
-                self.cross_section_depth.append(unpack_float(bin_data.read(4)))
-                self.cross_section_radius.append(unpack_float(bin_data.read(4)))
+                cross_section_depth.append(unpack_float(bin_data.read(4)))
+                cross_section_radius.append(unpack_float(bin_data.read(4)))
+            self.cross_section_depth = cross_section_depth
+            self.cross_section_radius = cross_section_radius
         
         if self.pof_ver >= 2007:
             self.num_lights = unpack_int(bin_data.read(4))
-            self.light_location = list()
-            self.light_type = list()
+            light_location = list()
+            light_type = list()
             for i in range(self.num_lights):
-                self.light_location.append(unpack_vector(bin_data.read(12)))
-                self.light_type.append(unpack_int(bin_data.read(4)))
+                light_location.append(unpack_vector(bin_data.read(12)))
+                light_type.append(unpack_int(bin_data.read(4)))
+            self.light_locations = light_location
+            self.light_types = light_type
                 
         return True
         
@@ -693,20 +651,25 @@ class HeaderChunk(POFChunk):
         if self.pof_ver >= 1903:
             chunk += pack_float(self.mass)
             chunk += pack_float(self.mass_center)
-            for i in self.moment_inertia:
+            inertia_tensor = self.inertia_tensor
+            for i in inertia_tensor:
                 chunk += pack_float(i)
                 
         if self.pof_ver >= 2014:
             chunk += pack_int(self.num_cross_sections)
+            cross_section_depth = self.cross_section_depth
+            cross_section_radius = self.cross_section_radius
             for i in range(self.num_cross_sections):
-                chunk += pack_float(self.cross_section_depth)
-                chunk += pack_float(self.cross_section_radius)
+                chunk += pack_float(cross_section_depth[i])
+                chunk += pack_float(cross_section_radius[i])
                 
         if self.pof_ver >= 2007
             chunk += pack_int(self.num_lights)
+            light_locations = self.light_locations
+            light_types = self.light_types
             for i in range(self.num_lights):
-                chunk += pack_float(self.light_location)
-                chunk += pack_int(self.light_type)
+                chunk += pack_float(light_locations[i])
+                chunk += pack_int(light_types[i])
         
         return chunk
         
@@ -745,10 +708,11 @@ class TextureChunk(POFChunk):
     CHUNK_ID = b'TXTR'
     def read_chunk(self, bin_data):
         self.num_textures = unpack_int(bin_data.read(4))
-        self.textures = list()
+        textures = list()
         for i in range(self.num_textures):
             str_len = unpack_int(bin_data.read(4))
-            self.textures.append(bin_data.read(str_len))
+            textures.append(bin_data.read(str_len))
+        self.textures = textures
             
         return True
         
@@ -762,7 +726,8 @@ class TextureChunk(POFChunk):
         
         chunk += pack_int(self.num_textures)
         
-        for s in self.textures:
+        textures = self.textures
+        for s in textures:
             chunk += pack_int(len(s))
             chunk += s
             
@@ -771,7 +736,8 @@ class TextureChunk(POFChunk):
     def __len__(self):
         try:
             chunk_length = 4
-            for s in self.textures:
+            textures = self.textures
+            for s in textures:
                 chunk_length += 4 + len(s)
             return chunk_length
         except AttributeError:
@@ -807,37 +773,45 @@ class PathChunk(POFChunk):
     def read_chunk(self, bin_data):
         self.num_paths = unpack_int(bin_data.read(4))
         
-        self.path_names = list()
-        self.path_parents = list()
-        self.num_verts = list()
-        self.vert_pos = list()
-        self.vert_rad = list()
-        self.vert_num_turrets = list()
-        self.turret_sobj_num = list()
+        path_names = list()
+        path_parents = list()
+        num_verts = list()
+        vert_pos = list()
+        vert_rad = list()
+        vert_num_turrets = list()
+        turret_sobj_num = list()
         
         for i in range(self.num_paths):
             str_len = unpack_int(bin_data.read(4))
-            self.path_names.append(bin_data.read(str_len))
+            path_names.append(bin_data.read(str_len))
             
             str_len = unpack_int(bin_data.read(4))
-            self.path_parents.append(bin_data.read(str_len))
+            path_parents.append(bin_data.read(str_len))
             
-            self.num_verts.append(unpack_int(bin_data.read(4)))
+            num_verts.append(unpack_int(bin_data.read(4)))
             
-            self.vert_pos.append(list())
-            self.vert_rad.append(list())
-            self.vert_num_turrets.append(list())
-            self.turret_sobj_num.append(list())
+            vert_pos.append(list())
+            vert_rad.append(list())
+            vert_num_turrets.append(list())
+            turret_sobj_num.append(list())
             
-            for j in range(self.num_verts[i]):
-                self.vert_pos[i].append(unpack_vector(bin_data.read(12)))
-                self.vert_rad[i].append(unpack_float(bin_data.read(4)))
-                self.vert_num_turrets[i].append(unpack_int(bin_data.read(4)))
+            for j in range(num_verts[i]):
+                vert_pos[i].append(unpack_vector(bin_data.read(12)))
+                vert_rad[i].append(unpack_float(bin_data.read(4)))
+                vert_num_turrets[i].append(unpack_int(bin_data.read(4)))
                 
-                self.turret_sobj_num[i].append(list())
+                turret_sobj_num[i].append(list())
                 
-                for k in range(self.vert_num_turrets[i][j]):
+                for k in range(vert_num_turrets[i][j]):
                     self.turret_sobj_num[i][j].append(unpack_int(bin_data.read(4)))
+                    
+        self.path_names = path_names
+        self.path_parents = path_parents
+        self.num_verts = num_verts
+        self.vert_pos = vert_pos
+        self.vert_rad = vert_rad
+        self.vert_num_turrets = vert_num_turrets
+        self.turret_sobj_num = turret_sobj_num
                     
         return True
                     
@@ -851,22 +825,30 @@ class PathChunk(POFChunk):
         
         chunk += pack_int(self.num_paths)
         
+        path_names = self.path_names
+        path_parents = self.path_parents
+        num_verts = self.num_verts
+        vert_pos = self.vert_pos
+        vert_rad = self.vert_rad
+        vert_num_turrets = self.vert_num_turrets
+        turret_sobj_num = self.turret_sobj_num
+        
         for i in range(self.num_paths):
-            chunk += pack_int(len(self.path_names[i]))
-            chunk += self.path_names[i]
+            chunk += pack_int(len(path_names[i]))
+            chunk += path_names[i]
             
-            chunk += pack_int(len(self.path_parents[i]))
-            chunk += self.path_parents[i]
+            chunk += pack_int(len(path_parents[i]))
+            chunk += path_parents[i]
             
-            chunk += pack_int(self.num_verts[i])
+            chunk += pack_int(num_verts[i])
             
-            for j in range(self.num_verts[i]):
-                chunk += pack_float(self.vert_pos[i][j])
-                chunk += pack_float(self.vert_rad[i][j])
-                chunk += pack_int(self.vert_num_turrets[i][j])
+            for j in range(num_verts[i]):
+                chunk += pack_float(vert_pos[i][j])
+                chunk += pack_float(vert_rad[i][j])
+                chunk += pack_int(vert_num_turrets[i][j])
                 
-                for k in range(self.vert_num_turrets[i][j]):
-                    chunk += pack_int(self.sobj_number[i][j][k])
+                for k in range(vert_num_turrets[i][j]):
+                    chunk += pack_int(sobj_number[i][j][k])
                     
         return chunk
         
@@ -874,20 +856,26 @@ class PathChunk(POFChunk):
         try:
             chunk_length = 4
             
+            path_names = self.path_names
+            path_parents = self.path_parents
+            num_verts = self.num_verts
+            vert_num_turrets = self.vert_num_turrets
+            
             for i in range(self.num_paths):
-                chunk_length += 4 + len(self.path_names[i])
-                chunk_length += 4 + len(self.path_parents[i])
+                chunk_length += 4 + len(path_names[i])
+                chunk_length += 4 + len(path_parents[i])
                 chunk_length += 4
                 
-                for j in range(self.num_verts[i]):
+                for j in range(num_verts[i]):
                     chunk_length += 20
-                    chunk_length += 4 * self.vert_num_turrets[i][j]
+                    chunk_length += 4 * vert_num_turrets[i][j]
                     
             return chunk_length
         except AttributeError:
             return 0
             
 class SpecialChunk(POFChunk):
+    ## TO DO: Localize variables
     CHUNK_ID = b'SPCL'
     def read_chunk(self, bin_data):
         self.num_special_points = unpack_int(bin_data.read(4))
@@ -945,6 +933,7 @@ class SpecialChunk(POFChunk):
             return 0
             
 class ShieldChunk(POFChunk):
+    ## TO DO: Localize variables
     CHUNK_ID = b'SHLD'
     def read_chunk(self, bin_data):
         self.num_verts = unpack_int(bin_data.read(4))
