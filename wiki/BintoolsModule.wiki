@@ -1,0 +1,20 @@
+#summary Documentation for the bintools module.
+#labels Phase-Implementation
+
+= Introduction =
+
+The `bintools` module contains a set of wrapper functions for the `struct` module's `pack()` and `unpack()` functions.  It also contains the file-like `RawData` object, which is compatible with file objects for reading, but doesn't require a file to be open on the disk.
+
+
+= Details =
+
+==Module methods==
+===`unpack_byte(bin_data)`===
+===`unpack_ubyte(bin_data)`===
+===`unpack_short(bin_data)`===
+===`unpack_ushort(bin_data)`===
+===`unpack_int(bin_data)`===
+===`unpack_uint(bin_data)`===
+===`unpack_float(bin_data)`===
+===`unpack_vector(bin_data)`===
+Each of these methods requires a *string* or a *bytes* object as an argument and unpacks the respective data type from it.  If the length of `bin_data` is a multiple of the respective data type's byte length, the method will return a sequence of unpacked data.  If the length of `bin_data` is not a multiple of the respective data type's byte length, the method will return an empty object of that data type.
