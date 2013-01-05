@@ -98,7 +98,6 @@ class VolitionPackageFile:
         
     def get_file(self, path, sep='/'):
         parent_directory = self.vp_file_directory
-        # full_path = "root/" + path
         split_path = path.split(sep)
         logging.info("Retrieving file {}".format(path))
         logging.debug("Split path is {}".format(split_path))
@@ -107,16 +106,37 @@ class VolitionPackageFile:
         
         for i, cur_dir in enumerate(split_path):
             for dir in cur_node:
-                try:
-                    if dir.name == split_path[i]:
-                        logging.debug("Found match. cur_node is {}".format(dir))
-                        parent_directory = dir
-                        cur_node = dir.contents
-                except IndexError:
-                    pass
+                if dir.name == split_path[i]:
+                    logging.debug("Found match. cur_node is {}".format(dir))
+                    parent_directory = dir
+                    cur_node = dir.contents
                     
         return parent_directory
         
+    def remove_file(self, path, sep='/'):
+        ## This is kind of hacked together - fix it!
+        parent_directory = self.vp_file_directory
+        split_path = path.split(sep)
+        logging.info("Removing file {}".format(path))
+        logging.debug("Split path is {}".format(split_path))
+        cur_node = parent_directory.contents
+        logging.debug("cur_node at begin is {}".format(cur_node))
+        path_depth = len(split_path) - 1
+        
+        for i, cur_dir in enumerate(split_path):
+            for dir in cur_node:
+                if dir.name == split_path[i]:
+                    logging.debug("Found match. cur_node is {}".format(dir))
+                    parents_parent = parent_directory
+                    parent_directory = dir
+                    cur_node = dir.contents
+                    
+        if parent_directory.name == split_path[path_depth]:
+            parents_parent.contents.remove(parent_directory)
+        else:
+            raise FileNotFoundError(path, " does not exist")
+            
+        return True
     # def set_file(self, path, file_data, sep='/'):
         # vp_file_directory = self.vp_file
         # split_path = path.split(sep)
