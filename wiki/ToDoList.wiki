@@ -2,7 +2,6 @@
 #labels Featured,Phase-Implementation
 
  * Add wiki pages
-  * ~~To-do list~~
   * File formats
    * ~~POF~~
    * ~~BSP - _Need extra notes_~~
@@ -19,32 +18,16 @@
     * read_pof()
     * write_pof()
     * generate_tree_recursion()
-   * Private methods
-    * pack() and unpack() wrappers
- * Testing
-  * ~~Check sample POF file for how vertex normals are arranged (1 per face that uses each vertex?)~~
- * ~~Finish writing bintools module~~ _Anything not included in `struct` will be included in the volition module._
-  * ~~short, ushort~~
-  * ~~char (signed byte)~~
-  * ~~vector~~
- * Optimization
-  * Localize variables instead of using `self.x` *Need to do this for POF chunks ASAP*
-  * PEP8 compliance
-   * Break up long lines using extra variables
-   * Add extra white space around module methods and classes
  * Finish writing volition module
   * POF utilities
    * BSP tree generator
-   * ~~Helper data types~~
-    * ~~Vector~~
-    * ~~Vertex~~
-    * ~~Face~~
-     * ~~Centroid calculation~~
-     * ~~Face normal calculation~~
-    * ~~Edge~~
-    * ~~Mesh~~
+   * Helper data types
+    * Mesh
      * ~~Vertex normals calculation~~
      * ~~Vertex normal indexing~~
+     * Calculate seams
+     * Calculate edge_list from face_list
+     * Calculate vert_list from edge_list
    * Classes for each chunk
     * ~~Header~~
     * ~~Textures~~
@@ -62,24 +45,9 @@
     * Glow points
     * Shield mesh collision tree
     * BSP data blocks
-  * VP utilities
-
-==What NEEDS to be done before we can test==
- * volition module with POF stuff
- * Blender scripts for basic import export
-
-==What does NOT need to be done before we can test==
- * All the formality of a Blender addon
- * A user interface
- * volition module with VP stuff
 
 ==Goals for the far distant future==
  * Calculate moment of inertia during export
  * Rewrite module in Cython
- * Split `volition` package into modules
-  * pof
-  * vp
-  * tbl
-  * ani
  * Blender addon for mission design
  * Blender addon for render to ani
