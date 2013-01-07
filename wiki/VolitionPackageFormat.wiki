@@ -26,6 +26,8 @@ All valid VP files should start with the "data" directory as the toplevel.
 Note that it isn't necessary at all to add backdirs at the end of a VP file.
 
 ==Implementation==
+_This section needs to be updated to reflect the current implementation._
+
 The module should contain a class `VolitionPackageFile` with attributes for the header and file data.  The class is initialized with a file object or RawData object representing the binary VP file.  The class's constructor reads the index and creates nested dictionary objects representing the directory structure:
 {{{
 vp_file_directory = {
