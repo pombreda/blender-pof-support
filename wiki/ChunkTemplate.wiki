@@ -1,0 +1,41 @@
+#summary Template for chunk classes
+#labels Phase-Design
+
+{{{
+class TextureChunk(POFChunk):
+    CHUNK_ID = b'TXTR'
+    def read_chunk(self, bin_data):
+        self.num_textures = unpack_int(bin_data.read(4))
+        textures = list()
+        for i in range(self.num_textures):
+            str_len = unpack_int(bin_data.read(4))
+            textures.append(bin_data.read(str_len))
+        self.textures = textures
+        
+    def write_chunk(self):
+        chunk = self.CHUNK_ID
+        length = len(self)
+        if length:
+            chunk += pack_int(length)
+        else:
+            return False
+        
+        chunk += pack_int(self.num_textures)
+        
+        textures = self.textures
+        for s in textures:
+            chunk += pack_int(len(s))
+            chunk += s
+            
+        return chunk
+        
+    def __len__(self):
+        try:
+            chunk_length = 4
+            textures = self.textures
+            for s in textures:
+                chunk_length += 4 + len(s)
+            return chunk_length
+        except AttributeError:
+            return 0
+}}}
