@@ -161,6 +161,7 @@ class Mesh:
         get_vert_normals(format = "vertex") - returns a list of vertex normals indexed to the mesh's vert list or, optionally, the edge list's or face list's vertex lists
     """
     def __init__(self, vert_list=False, edge_list=False, face_list=False):
+        ## TO DO: if face_list and not vert_list and not edge_list, make vert_list and edge_list
         self.vert_list = vert_list
         self.edge_list = edge_list
         self.face_list = face_list
@@ -439,10 +440,10 @@ class Vertex:
             return False
             
     def __hash__(self):
-        return self.co
+        return hash(self.co)
         
     def __repr__(self):
-        return "<volition.Vertex object with coords {}>".format(self.co)
+        return "<pof.Vertex object with coords {}>".format(self.co)
         
     def __str__(self):
         return str(self.co)
@@ -452,7 +453,7 @@ class Edge:
         if not isinstance(verts[0], Vertex) or not isinstance(verts[1], Vertex) or len(verts) != 2:
             raise VertListError(verts, "Vertex list for Edge object instantiation must be sequence of two Vertex objects.")
         else:
-            self.verts = verts
+            self.verts = frozenset(verts)
             self.seam = seam
             self.length = sqrt((verts[1].co[0] - verts[0].co[0]) ** 2 + (verts[1].co[1] - verts[0].co[1]) ** 2 + (verts[1].co[2] - verts[0].co[2]) ** 2)
             
@@ -463,10 +464,10 @@ class Edge:
             return False
             
     def __hash__(self):
-        return self.verts
+        return hash(self.verts)
         
     def __repr__(self):
-        return "<volition.Edge object with vertices {}>".format(str(self.verts))
+        return "<pof.Edge object with vertices {}>".format(str(self.verts))
         
     def __str__(self):
         return str(self.verts)
@@ -488,7 +489,7 @@ class Face:
         ## TO DO: Re-write edge check, include stipulation that only two edges can use a vertex
             
         # Everything OK, can assign the edge list now
-        self.edges = edge_list
+        self.edges = frozenset(edge_list)
         
         # Calculate, in order, centroid, normal, and radius
         verts_x = list()
@@ -537,10 +538,10 @@ class Face:
             return False
             
     def __hash__(self):
-        return self.edges
+        return hash(self.edges)
         
     def __repr__(self):
-        return "<volition.Face object with edges {}>".format(str(self.edges))
+        return "<pof.Face object with edges {}>".format(str(self.edges))
         
     def __str__(self):
         return str(self.edges)
@@ -549,9 +550,15 @@ class Face:
 
 class POFChunk:
     """Base class for all POF chunks.  Calling len() on a chunk will return the estimated size of the packed binary chunk, minus chunk header."""
-    
+    CHUNK_ID = b"PSPO"
     def __init__(self, pof_ver = 2117):
         self.pof_ver = pof_ver
+        
+    def __len__(self):
+        return 0
+        
+    def __repr__(self):
+        return "<POF chunk with ID {}, size {}, and POF version {}>".format(self.CHUNK_ID, len(self), self.pof_ver)
         
 class HeaderChunk(POFChunk):
 
@@ -880,20 +887,25 @@ class SpecialChunk(POFChunk):
     def read_chunk(self, bin_data):
         self.num_special_points = unpack_int(bin_data.read(4))
         
-        self.point_names = list()
-        self.point_properties = list()
-        self.points = list()
-        self.point_radius = list()
+        point_names = list()
+        point_properties = list()
+        points = list()
+        point_radius = list()
         
         for i in range(self.num_special_points):
             str_len = unpack_int(bin_data.read(4))
-            self.point_names.append(bin_data.read(str_len))
+            point_names.append(bin_data.read(str_len))
             
             str_len = unpack_int(bin_data.read(4))
-            self.point_properties.append(bin_data.read(str_len))
+            point_properties.append(bin_data.read(str_len))
             
-            self.points.append(unpack_vector(bin_data.read(12)))
-            self.point_radius.append(unpack_float(bin_data.read(4)))
+            points.append(unpack_vector(bin_data.read(12)))
+            point_radius.append(unpack_float(bin_data.read(4)))
+            
+        self.point_names = point_names
+        self.point_properties = point_properties
+        self.points = points
+        self.point_radius = point_radius
             
         return True
         

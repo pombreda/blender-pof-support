@@ -37,8 +37,20 @@ class FileNotFoundError(VolitionError):
         
     def __str__(self):
         return "File not found: {}, {}.".format(self.path, self.msg)
+        
+class VolitionPackageError(VolitionError):
+    def __init__(self, msg):
+        self.msg = msg
+        
+    def __str__(self):
+        return self.msg
 
 class VolitionPackageFile:
+    """A VP directory tree.  Folders are stored as Folder objects and files are stored as File objects containing
+    the contents of the file.  The constructor takes a file-like object as a required argument and creates the
+    necessary File and Folder objects to fill the directory tree, self.vp_file_directory.  Internally, all folders
+    and files are stored in a Folder object with the name attribute "root."  However, all read and write methods
+    are written to take paths starting with the first entry in the actual VP file's index (usually "data")."""
     def __init__(self, vp_file):
         logging.info("Creating a VolitionPackageFile object.")
         vp_file_id = vp_file.read(4)
@@ -97,6 +109,8 @@ class VolitionPackageFile:
         self.vp_file_directory = vp_file_directory
         
     def get_file(self, path, sep='/'):
+        """Returns a File object or Folder object for further processing.  Takes a full path including the file/folder name
+        as a required argument and a separator character as an optional argument."""
         parent_directory = self.vp_file_directory
         split_path = path.split(sep)
         logging.info("Retrieving file {}".format(path))
@@ -104,17 +118,28 @@ class VolitionPackageFile:
         cur_node = parent_directory.contents
         logging.debug("cur_node at begin is {}".format(cur_node))
         
+        # traverse path
         for i, cur_dir in enumerate(split_path):
             for dir in cur_node:
-                if dir.name == split_path[i]:
-                    logging.debug("Found match. cur_node is {}".format(dir))
+                if dir.name == cur_dir:
+                    logging.debug("Found match. Current dir is {}".format(dir))
                     parent_directory = dir
                     cur_node = dir.contents
+                    break
+            else:
+                raise FileNotFoundError(path, "{} does not exist".format(cur_dir))
+                
+        # At this point, dir or parent_directory matches the
+        # last item in split_path and cur_node is the contents
+        # of that item, whether it's a file or folder.
+        # parent_directory is a File object or Folder object
+        # cur_node is a set of File objects and/or Folder objects
                     
         return parent_directory
         
     def remove_file(self, path, sep='/'):
-        ## This is kind of hacked together - fix it!
+        """Removes a file or folder from the directory.  Takes a full path including the file/folder name
+        as a required argument and a separator character as an optional argument."""
         parent_directory = self.vp_file_directory
         split_path = path.split(sep)
         logging.info("Removing file {}".format(path))
@@ -123,6 +148,7 @@ class VolitionPackageFile:
         logging.debug("cur_node at begin is {}".format(cur_node))
         path_depth = len(split_path) - 1
         
+        # traverse path
         for i, cur_dir in enumerate(split_path):
             for dir in cur_node:
                 if dir.name == split_path[i]:
@@ -130,96 +156,137 @@ class VolitionPackageFile:
                     parents_parent = parent_directory
                     parent_directory = dir
                     cur_node = dir.contents
+                    break
+            else:
+                raise FileNotFoundError(path, "{} does not exist".format(cur_dir))
+                    
+        # At this point, dir or parent_directory matches the
+        # last item in split_path and cur_node is the contents
+        # of that item, whether it's a file or folder.
+        # parent_directory is a File object or Folder object
+        # cur_node is a set of File objects and/or Folder objects
                     
         if parent_directory.name == split_path[path_depth]:
             parents_parent.contents.remove(parent_directory)
         else:
             raise FileNotFoundError(path, " does not exist")
-            
-        return True
-    # def set_file(self, path, file_data, sep='/'):
-        # vp_file_directory = self.vp_file
-        # split_path = path.split(sep)
-        # timestamp = int(time.clock())
-        # prev_dir = vp_file_directory
         
-        # for i, dir in enumerate(split_path, 1):
-            # try:
-                # this_dir = prev_dir[dir]
-                # prev_dir = this_dir
-            # except KeyError:
-                # if i != len(split_path):
-                    # prev_dir[dir] = dict()    # path doesn't exist - create it
-                    # this_dir = prev_dir[dir]
-                    # prev_dir = this_dir
-                # else:                         # end of path, create file
-                    # prev_dir[dir] = (file_data, timestamp)
-                    
-    # def make_vp_file(self):
-        # vp_file_id = b"VPVP"
-        # vp_file_version = 2
+    def add_file(self, path, file, sep='/'):
+        parent_directory = self.vp_file_directory
+        split_path = path.split(sep)
+        logging.info("Adding file {} to {}".format(file.name, path))
         
-        # vp_file_directory = self.vp_file
+        cur_node = parent_directory.contents
         
-        # result = self._recurse_thru_directory(vp_file_directory)
-        # vp_file_files = b"".join(result[0])
-        # vp_file_index = b"".join(result[1])
+        path_depth = len(split_path)
         
-        # vp_file_diroffset = result[2]
-        # vp_file_num_files = len(result[1])
-        # vp_file_head = b"".join([vp_file_id,
-                                 # pack_int(vp_file_version),
-                                 # pack_int(vp_file_diroffset),
-                                 # pack_int(vp_file_num_files)])
-        
-        # vp_file = b"".join([vp_file_head, vp_file_files, vp_file_index])
-        # return vp_file
-        
-    # def _recurse_thru_directory(self, vp_file_directory, cur_files=False, cur_index=False, cur_offset=16):
-        # if not cur_index:
-            # cur_index = list()
-            
-        # if not cur_files:
-            # cur_files = list()
-            
-        # for k, v in vp_file_directory:
-            
-            # if isinstance(v, dict):
-                # # entry is a folder
-                # this_entry_offset = 0
-                # this_entry_size = 0
-                # this_entry_name = k
-                # this_entry_timestamp = 0
-                # cur_index.append("".join([pack_int(this_entry_offset),
-                                          # pack_int(this_entry_size),
-                                          # this_entry_name.ljust(32, b'\0'),
-                                          # pack_int(this_entry_timestamp)]))
-                # t = self._recurse_thru_directory(v, cur_files, cur_index, cur_offset)
-                # cur_offset = t[2]
-            # else:
-                # # entry is a file
-                # this_entry_offset = cur_offset
-                # this_entry_size = len(v[0])
-                # this_entry_name = k
-                # this_entry_timestamp = v[1]
-                # cur_files.append(v[0])
-                # cur_offset += this_entry_size
-                # cur_index.append("".join([pack_int(this_entry_offset),
-                                  # pack_int(this_entry_size),
-                                  # this_entry_name.ljust(32, b'\0'),
-                                  # pack_int(this_entry_timestamp)]))
-                                  
-        # # done with dir, make backdir
-        # this_entry_offset = 0
-        # this_entry_size = 0
-        # this_entry_name = b".."
-        # this_entry_timestamp = 0
-        # cur_index.append("".join([pack_int(this_entry_offset),
-                                  # pack_int(this_entry_size),
-                                  # this_entry_name.ljust(32, b'\0'),
-                                  # pack_int(this_entry_timestamp)]))
+        for i, cur_dir in enumerate(split_path):
+            for dir in cur_node:
+                if dir.name == cur_dir:
+                    logging.debug("Found match. cur_node is {}".format(dir))
+                    parent_directory = dir
+                    cur_node = dir.contents
+                    break
+            else:
+                raise FileNotFoundError(path, "{} does not exist".format(cur_dir))
                 
-        # return (cur_files, cur_index, cur_offset)
+        # At this point, dir or parent_directory matches the
+        # last item in split_path and cur_node is the contents
+        # of that item, whether it's a file or folder.
+        # parent_directory is a File object or Folder object
+        # cur_node is a set of File objects and/or Folder objects
+        
+        cur_node.add(file)
+        
+    def make_vp_file(self):
+        logging.info("Making binary VP file...")
+        self.cur_index = list()
+        self.cur_files = list()
+        self.cur_offset = 16        # header size == beginning offset is always 16 bytes
+        self._recurse_thru_directory(self.vp_file_directory.contents)
+        
+        vp_dir_offset = self.cur_offset
+        vp_num_files = len(self.cur_index)
+        
+        vp_header = b"".join([b"VPVP",
+                             pack_int(2),
+                             pack_int(vp_dir_offset),
+                             pack_int(vp_num_files)])
+        vp_files = b"".join(self.cur_files)
+        vp_index = b"".join(self.cur_index)
+        
+        logging.info("Success!")
+        logging.debug("VP directory offset {}".format(vp_dir_offset))
+        logging.debug("Number of VP directory entries {}".format(vp_num_files))
+        
+        return b"".join([vp_header, vp_files, vp_index])
+        
+    def _recurse_thru_directory(self, vp_file_directory):
+        # vp_file_directory should be a set - the contents of a Folder
+        cur_index = self.cur_index
+        cur_files = self.cur_files
+        cur_offset = self.cur_offset
+            
+        # This function should recurse through vp_file_directory, not returning anything,
+        # but updating self.cur_index, etc. at the end of each branch
+            
+        for cur_node in vp_file_directory:
+            if isinstance(cur_node, Folder):
+                this_entry_offset = 0
+                this_entry_size = 0
+                this_entry_name = cur_node.name.encode()
+                this_entry_timestamp = 0
+                
+                # add index entry for folder:
+                cur_index.append(b"".join([pack_int(this_entry_offset),
+                                          pack_int(this_entry_size),
+                                          this_entry_name.ljust(32, b'\0'),
+                                          pack_int(this_entry_timestamp)]))
+                                          
+                # save current state:
+                self.cur_index = cur_index
+                self.cur_files = cur_files
+                self.cur_offset = cur_offset
+                
+                self._recurse_thru_directory(cur_node.contents)
+                
+                # load current state:
+                cur_index = self.cur_index
+                cur_files = self.cur_files
+                cur_offset = self.cur_offset
+            elif isinstance(cur_node, File):
+                this_entry_offset = cur_offset
+                this_entry_size = len(cur_node)
+                this_entry_name = cur_node.name.encode()
+                this_entry_timestamp = cur_node.timestamp
+                
+                cur_offset += this_entry_size
+                cur_files.append(cur_node.contents)
+                
+                # add index entry for file:
+                cur_index.append(b"".join([pack_int(this_entry_offset),
+                                          pack_int(this_entry_size),
+                                          this_entry_name.ljust(32, b'\0'),
+                                          pack_int(this_entry_timestamp)]))
+            else:
+                raise VolitionPackageError("{} is {}, expected File or Folder".format(cur_node, type(cur_node)))
+                
+        # add backdir
+        this_entry_offset = 0
+        this_entry_size = 0
+        this_entry_name = b".."
+        this_entry_timestamp = 0
+        
+        # add index entry:
+        cur_index.append(b"".join([pack_int(this_entry_offset),
+                                  pack_int(this_entry_size),
+                                  this_entry_name.ljust(32, b'\0'),
+                                  pack_int(this_entry_timestamp)]))
+                                  
+        # save current state:
+        self.cur_index = cur_index
+        self.cur_files = cur_files
+        self.cur_offset = cur_offset
         
 class Folder:
     def __init__(self, name, parent="", contents=None):
@@ -255,7 +322,7 @@ class File:
         self.parent_name = str(parent)
             
     def __len__(self):
-        return len(contents)
+        return len(self.contents)
         
     def __eq__(self, other):
         if self.name == other.name and self.parent == other.parent:
