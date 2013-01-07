@@ -27,10 +27,10 @@
 
 ## Helpers
 # Mesh
+    # calculate edge_list from face_list
+    # calculate vert_list from edge_list
+    # calculate seams from vert norms
 ## Chunks
-# ShieldChunk
-    # get_mesh() - creates and returns a Mesh object
-    # set_mesh(mesh) - parses a Mesh object to fill out the chunk attributes
 # EyeChunk
 # GunChunk
 # TurretChunk
@@ -548,10 +548,38 @@ class Face:
             
 ## POF chunks ##
 
+chunk_dict = { # chunk or block id : chunk class
+              b"HDR2": HeaderChunk,
+              b"OHDR": HeaderChunk,
+              b"TXTR": TextureChunk,
+              b"PINF": MiscChunk,
+              b"PATH": PathChunk,
+              b"SPCL": SpecialChunk,
+              b"SHLD": ShieldChunk,
+              b" EYE": EyeChunk,
+              b"GPNT": GunChunk,
+              b"MPNT": GunChunk,
+              b"TGUN": TurretChunk,
+              b"TMIS": TurretChunk,
+              b"DOCK": DockChunk,
+              b"FUEL": FuelChunk,
+              b"SOBJ": ModelChunk,
+              b"OBJ2": ModelChunk,
+              b"INSG": SquadChunk,
+              b"ACEN": CenterChunk,
+              b"GLOW": GlowChunk,
+              b"SLDC": TreeChunk,
+              0: EndBlock,
+              1: DefpointsBlock,
+              2: FlatpolyBlock,
+              3: TexpolyBlock,
+              4: SortnormBlock,
+              5: BoundboxBlock}
+
 class POFChunk:
     """Base class for all POF chunks.  Calling len() on a chunk will return the estimated size of the packed binary chunk, minus chunk header."""
     CHUNK_ID = b"PSPO"
-    def __init__(self, pof_ver = 2117):
+    def __init__(self, pof_ver=2117, chunk_id=b'PSPO'):
         self.pof_ver = pof_ver
         
     def __len__(self):
@@ -568,7 +596,7 @@ class HeaderChunk(POFChunk):
         read_chunk(bin_data) - takes any Python file object or RawData object and attempts to parse it.  Assumes the chunk header (the chunk ID and length) is NOT included and does not size checking.  Returns True if successful.
         write_chunk() - attempts to pack the data in the chunk into a bytes object, which is returned.  This method DOES include the chunk ID and length in the returned data."""
     
-    def __init__(self, pof_ver = 2117):
+    def __init__(self, pof_ver=2117, chunk_id=b'PSPO'):
         self.pof_ver = pof_ver
         if pof_ver >= 2116:
             self.CHUNK_ID = b'HDR2'
@@ -882,7 +910,6 @@ class PathChunk(POFChunk):
             return 0
             
 class SpecialChunk(POFChunk):
-    ## TO DO: Localize variables
     CHUNK_ID = b'SPCL'
     def read_chunk(self, bin_data):
         self.num_special_points = unpack_int(bin_data.read(4))
@@ -919,15 +946,20 @@ class SpecialChunk(POFChunk):
         
         chunk += pack_int(self.num_special_points)
         
+        point_names = self.point_names
+        point_properties = self.point_properties
+        points = self.points
+        point_radius = self.point_radius
+        
         for i in range(self.num_special_points):
             chunk += pack_int(len(self.point_names[i]))
-            chunk += self.point_names[i]
+            chunk += point_names[i]
             
             chunk += pack_int(len(self.point_properties[i]))
-            chunk += self.point_properties[i]
+            chunk += point_properties[i]
             
-            chunk += pack_float(self.points[i])
-            chunk += pack_float(self.point_radius[i])
+            chunk += pack_float(points[i])
+            chunk += pack_float(point_radius[i])
             
         return chunk
         
@@ -935,9 +967,12 @@ class SpecialChunk(POFChunk):
         try:
             chunk_length = 4
             
+            point_names = self.point_names
+            point_properties = self.point_properties
+            
             for i in range(self.num_special_points):
-                chunk_length += 4 + len(self.point_names[i])
-                chunk_length += 4 + len(self.point_properties[i])
+                chunk_length += 4 + len(point_names[i])
+                chunk_length += 4 + len(point_properties[i])
                 chunk_length += 16
             
             return chunk_length
@@ -945,26 +980,31 @@ class SpecialChunk(POFChunk):
             return 0
             
 class ShieldChunk(POFChunk):
-    ## TO DO: Localize variables
     CHUNK_ID = b'SHLD'
     def read_chunk(self, bin_data):
         self.num_verts = unpack_int(bin_data.read(4))
         
-        self.vert_pos = list()
+        vert_pos = list()
         
         for i in range(self.num_verts):
-            self.vert_pos.append(unpack_vector(bin_data.read(12)))
+            vert_pos.append(unpack_vector(bin_data.read(12)))
+            
+        self.vert_pos = vert_pos
             
         self.num_faces = unpack_int(bin_data.read(4))
         
-        self.face_normals = list()
-        self.face_verts = list()
-        self.face_neighbors = list()
+        face_normals = list()
+        face_verts = list()
+        face_neighbors = list()
         
         for i in range(self.num_faces):
-            self.face_normals.append(unpack_vector(bin_data.read(12)))
-            self.face_verts.append(unpack_int(bin_data.read(12)))
-            self.face_neighbors.append(unpack_int(bin_data.read(12)))
+            face_normals.append(unpack_vector(bin_data.read(12)))
+            face_verts.append(unpack_int(bin_data.read(12)))
+            face_neighbors.append(unpack_int(bin_data.read(12)))
+            
+        self.face_normals = face_normals
+        self.face_verts = face_verts
+        self.face_neighbors = face_neighbors
             
     def write_chunk(self):
         chunk = self.CHUNK_ID
@@ -976,15 +1016,21 @@ class ShieldChunk(POFChunk):
             
         chunk += pack_int(self.num_verts)
         
+        vert_pos = self.vert_pos
+        
         for i in range(self.num_verts):
-            chunk += pack_float(self.vert_pos[i])
+            chunk += pack_float(vert_pos[i])
             
         chunk += pack_int(self.num_faces)
         
+        face_normals = self.face_normals
+        face_verts = self.face_verts
+        face_neighbors = self.face_neighbors
+        
         for i in range(self.num_faces):
-            chunk += pack_float(self.face_normals[i])
-            chunk += pack_int(self.face_verts[i])
-            chunk += pack_int(self.face_neighbors[i])
+            chunk += pack_float(face_normals[i])
+            chunk += pack_int(face_verts[i])
+            chunk += pack_int(face_neighbors[i])
             
         return chunk
         
@@ -1014,6 +1060,7 @@ class ShieldChunk(POFChunk):
         # shield meshes only have 80 faces (length of fei)
         # faces only have 3 edges (length of f1)
         # and edges can only be used by 2 faces (length of efi[e])
+        # that makes only 480 iterations,
         # so this takes almost no time at all
         
         face_neighbors = list()
@@ -1036,3 +1083,244 @@ class ShieldChunk(POFChunk):
             return chunk_length
         except AttributeError:
             return 0
+            
+class EyeChunk(POFChunk):
+    CHUNK_ID = b" EYE"
+    def read(self, bin_data):
+        pass
+        
+    def write(self):
+        pass
+        
+    def __len__(self):
+        pass
+    
+class GunChunk(POFChunk):           # GPNT and MPNT
+    def __init__(self, pof_ver=2117, chunk_id=b'GPNT'):
+        self.pof_ver = pof_ver
+        self.CHUNK_ID = chunk_id
+    def read(self, bin_data):
+        pass
+        
+    def write(self):
+        pass
+        
+    def __len__(self):
+        pass
+        
+class TurretChunk(POFChunk):           # TGUN and TMIS
+    def __init__(self, pof_ver=2117, chunk_id=b'TGUN'):
+        self.pof_ver = pof_ver
+        self.CHUNK_ID = chunk_id
+    def read(self, bin_data):
+        pass
+        
+    def write(self):
+        pass
+        
+    def __len__(self):
+        pass
+        
+class DockChunk(POFChunk):
+    CHUNK_ID = b"DOCK"
+    def read(self, bin_data):
+        pass
+        
+    def write(self):
+        pass
+        
+    def __len__(self):
+        pass
+        
+class FuelChunk(POFChunk):
+    CHUNK_ID = b"FUEL"
+    def read(self, bin_data):
+        pass
+        
+    def write(self):
+        pass
+        
+    def __len__(self):
+        pass
+        
+class ModelChunk(POFChunk):
+    def __init__(self, pof_ver=2117, chunk_id=b'PSPO'):
+        if pof_ver >= 2116:
+            self.CHUNK_ID = b"OBJ2"
+        else:
+            self.CHUNK_ID = b"SOBJ"
+            
+        self.pof_ver = pof_ver
+
+    def read(self, bin_data):
+        pass
+        
+    def write(self):
+        pass
+        
+    def get_mesh(self):
+        pass
+        
+    def set_mesh(self, mesh):
+        pass
+        
+    def make_bsp_tree(self):
+        pass
+        
+    def __len__(self):
+        pass
+        
+class SquadChunk(POFChunk):
+    CHUNK_ID = b"INSG"
+    def read(self, bin_data):
+        pass
+        
+    def write(self):
+        pass
+        
+    def __len__(self):
+        pass
+        
+class CenterChunk(POFChunk):
+    CHUNK_ID = b"ACEN"
+    def read(self, bin_data):
+        pass
+        
+    def write(self):
+        pass
+        
+    def __len__(self):
+        pass
+        
+class GlowChunk(POFChunk):
+    CHUNK_ID = b"GLOW"
+    def read(self, bin_data):
+        pass
+        
+    def write(self):
+        pass
+        
+    def __len__(self):
+        pass
+        
+class TreeChunk(POFChunk):
+    CHUNK_ID = b"SLDC"
+    def read(self, bin_data):
+        pass
+        
+    def write(self):
+        pass
+        
+    def make_shield_collision_tree(self, shield_chunk):
+        pass
+        
+    def __len__(self):
+        pass
+        
+class EndBlock(POFChunk):
+    CHUNK_ID = 0
+    def read(self, bin_data):
+        pass
+        
+    def write(self):
+        pass
+        
+    def __len__(self):
+        pass
+        
+class DefpointsBlock(POFChunk):
+    CHUNK_ID = 1
+    def read(self, bin_data):
+        pass
+        
+    def write(self):
+        pass
+        
+    def __len__(self):
+        pass
+        
+class FlatpolyBlock(POFChunk):
+    CHUNK_ID = 2
+    def read(self, bin_data):
+        pass
+        
+    def write(self):
+        pass
+        
+    def __len__(self):
+        pass
+        
+class TexpolyBlock(POFChunk):
+    CHUNK_ID = 3
+    def read(self, bin_data):
+        pass
+        
+    def write(self):
+        pass
+        
+    def __len__(self):
+        pass
+        
+class SortnormBlock(POFChunk):
+    CHUNK_ID = 4
+    def read(self, bin_data):
+        pass
+        
+    def write(self):
+        pass
+        
+    def __len__(self):
+        pass
+        
+class BoundboxBlock(POFChunk):
+    CHUNK_ID = 5
+    def read(self, bin_data):
+        pass
+        
+    def write(self):
+        pass
+        
+    def __len__(self):
+        pass
+        
+## Module methods ##
+
+def read_pof(pof_file):
+    """Takes a file-like object as a required argument, returns a list of chunks."""
+    
+    file_id = pof_file.read(4)
+    if file_id != b'PSPO':
+        raise FileFormatError(file_id, "Incorrect file ID for POF file")
+        
+    file_version = unpack_int(pof_file.read(4))
+    if file_version > 2117:
+        raise FileFormatError(file_version, "Expected POF version 2117 or lower, file version")
+        
+    chunk_list = list()
+        
+    while True:
+        chunk_id = pof_file.read(4)
+        if chunk_id:
+            chunk_length = unpack_int(pof_file.read(4))
+            this_chunk = chunk_dict[chunk_id](file_version, chunk_id)
+            chunk_data = RawData(pof_file.read(chunk_length))
+            this_chunk.read(chunk_data)
+            chunk_list.append(this_chunk)
+        else:       # EOF
+            break
+            
+    return chunk_list
+    
+def write_pof(chunk_list, pof_version=2117):
+    """Takes a list of chunks as a required argument, returns a bytes object.  Optional argument pof_version specifies
+    the POF version (duh).  If any chunk does not use the same version as used for the file, the file might not be
+    valid and readable!"""
+    
+    file_header = b"".join([b'PSPO', pack_int(pof_version)])
+    
+    raw_chunks = b""
+    
+    for chunk in chunk_list:
+        raw_chunks += chunk.write()
+        
+    return b"".join([file_header, raw_chunks])

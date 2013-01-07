@@ -48,4 +48,4 @@ class FileFormatError(VolitionError):
         self.msg = msg
         
     def __str__(self):
-        return "Invalid filetype: {}, {}.".format(self.msg, self.path)
+        return "{}, {}.".format(self.msg, self.path)
