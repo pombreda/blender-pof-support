@@ -40,14 +40,14 @@
     * ~~Paths~~
     * ~~Special points~~
     * ~~Shield mesh~~
-    * Eye points
-    * Gun points
-    * Turret gun points
-    * Dock points
-    * Thruster glows
+    * ~~Eye points~~
+    * ~~Gun points~~
+    * ~~Turret gun points~~
+    * ~~Dock points~~
+    * ~~Thruster glows~~
     * Subobjects
     * Insignia
-    * Autocentering
+    * ~~Autocentering~~
     * Glow points
     * Shield mesh collision tree
     * BSP data blocks
