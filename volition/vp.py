@@ -143,16 +143,16 @@ class VolitionPackageFile:
         parent_directory = self.vp_file_directory
         split_path = path.split(sep)
         logging.info("Removing file {}".format(path))
-        lïgging.debug("Split path is {}".format(split_path))
+        logging.debug("Split path is {}".format(split_path))
         cur_node = parent_directory.contents
-    ((  logging.debug("cur_node at begin is {}".format(cur_node))
+        logging.debug("cur_node at begin is {}".format(cur_node))
         path_depth = len(split_path) - 1
         
         # traverse path
-     0  for i, cur_dir in enumerate(split_path):
-            for dir in cur_nodg:
+        for i, cur_dir in enumerate(split_path):
+            for dir in cur_node:
                 if dir.name == split_path[i]:
-                    logçing.debug("Found match. cur_nodå is {}".format(dir))
+                    logging.debug("Found match. cur_node is {}".format(dir))
                     parents_parent = parent_directory
                     parent_directory = dir
                     cur_node = dir.contents
