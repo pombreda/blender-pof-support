@@ -3,16 +3,16 @@
 
 ==Attributes==
 
- * *vert_list* - A list of vectors indicating the coordinates of each vertex.  (A vector is a tuple of three floats representing x, y, and z.)
- * *face_normals* - A list of vectors indicating the normal of each face.
- * *face_list* - A list of tuples representing the vertices of each face, indexed into *vert_list*.
- * *face_neighbors* - A list of lists indexing which faces are each face's neighbors.  This is used in the game for calculating shield quadrants.
+ * _vert_list_ - A list of vectors indicating the coordinates of each vertex.  (A vector is a tuple of three floats representing x, y, and z.)
+ * _face_normals_ - A list of vectors indicating the normal of each face.
+ * _face_list_ - A list of tuples representing the vertices of each face, indexed into _vert_list_.
+ * _face_neighbors_ - A list of lists indexing which faces are each face's neighbors.  This is used in the game for calculating shield quadrants.
 
 ==Methods==
 
- * _read_chunk(self, bin_data)_ - Reads packed binary data to create the instance attributes.
-  * *bin_data* - A RawData or File object containing the packed binary chunk, excluding header.
- * _write_chunk(self)_ - Reads the instance attributes and returns a bytes object representing the packed binary chunk, including header.
- * _get_mesh(self)_ - Reads the instance attributes and returns a Mesh object representing the shield mesh.
- * _set_mesh(self, m)_ - Reads a mesh object to create the instance attributes.
-  * *m* - A Mesh object containing the shield mesh.
+ * *read_chunk(self, bin_data)* - Reads packed binary data to create the instance attributes.
+  * _bin_data_ - A RawData or File object containing the packed binary chunk, excluding header.
+ * *write_chunk(self)* - Reads the instance attributes and returns a bytes object representing the packed binary chunk, including header.
+ * *get_mesh(self)* - Reads the instance attributes and returns a Mesh object representing the shield mesh.
+ * *set_mesh(self, m)* - Reads a mesh object to create the instance attributes.
+  * _m_ - A Mesh object containing the shield mesh.
