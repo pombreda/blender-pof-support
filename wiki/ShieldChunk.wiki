@@ -1,7 +1,7 @@
 #summary Documentation of volition.pof.ShieldChunk
 #labels Phase-Implementation
 
-==Attributes==
+==Instance Attributes==
 
  * _vert_list_ - A list of vectors indicating the coordinates of each vertex.  (A vector is a tuple of three floats representing x, y, and z.)
  * _face_normals_ - A list of vectors indicating the normal of each face.
