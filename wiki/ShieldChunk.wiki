@@ -10,9 +10,9 @@
 
 ==Methods==
 
- * *read_chunk(self, bin_data)* - Reads packed binary data to create the instance attributes.
+ * *read_chunk*_(self, bin_data)_ - Reads packed binary data to create the instance attributes.
   * _bin_data_ - A RawData or File object containing the packed binary chunk, excluding header.
- * *write_chunk(self)* - Reads the instance attributes and returns a bytes object representing the packed binary chunk, including header.
- * *get_mesh(self)* - Reads the instance attributes and returns a Mesh object representing the shield mesh.
- * *set_mesh(self, m)* - Reads a mesh object to create the instance attributes.
+ * *write_chunk*_(self)_ - Reads the instance attributes and returns a bytes object representing the packed binary chunk, including header.
+ * *get_mesh*_(self)_ - Reads the instance attributes and returns a Mesh object representing the shield mesh.
+ * *set_mesh*_(self, m)_ - Reads a mesh object to create the instance attributes.
   * _m_ - A Mesh object containing the shield mesh.
