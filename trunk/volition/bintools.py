@@ -313,9 +313,12 @@ class RawData:
         if length == 0:
             return self.data
         else:
-            out = self.data[self.addr:self.addr + length]
-            self.addr += length
-            return out
+            try:
+                out = self.data[self.addr:self.addr + length]
+                self.addr += length
+                return out
+            except IndexError:
+                return False
             
     def seek(self, new_addr, whence = 0):
         if whence == 1:
@@ -324,3 +327,6 @@ class RawData:
             self.addr = len(self.data) - new_addr
         else:
             self.addr = new_addr
+            
+    def tell(self):
+        return self.addr

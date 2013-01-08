@@ -45,6 +45,7 @@
 # SortnormBlock
 # BoundboxBlock
 ## POF and BSP functions
+# validate_pof()
 # make_defpoints()
 # make_polylist()
 # generate_tree_recursion()
@@ -1400,7 +1401,44 @@ class ModelChunk(POFChunk):
         self.pof_ver = pof_ver
 
     def read_chunk(self, bin_data):
-        pass
+        pof_ver = self.pof_ver
+        
+        self.model_id = unpack_int(bin_data.read(4))
+        
+        if pof_ver >= 2116:
+            self.radius = unpack_float(bin_data.read(4))
+            self.parent_id = unpack_int(bin_data.read(4))
+            self.offset = unpack_vector(bin_data.read(12))
+        else:
+            self.parent_id = unpack_int(bin_data.read(4))
+            self.offset = unpack_vector(bin_data.read(12))
+            self.radius = unpack_float(bin_data.read(4))
+            
+        self.center = unpack_vector(bin_data.read(12))
+        self.min = unpack_vector(bin_data.read(12))
+        self.max = unpack_vector(bin_data.read(12))
+        
+        str_len = unpack_int(bin_data.read(4))
+        self.name = bin_data.read(str_len)
+        slr_len = unpack_int(bin_data.read(4))
+        self.properties = bin_data.read(str_len)
+        self.movement_type = unpack_int(bin_data.read(4))
+        self.movement_axis = unpack_int(bin_data.read(4))
+        
+        bin_data.seek(4, 1)     # int reserved, must be 0
+        bsp_size = unpack_int(bin_data.read(4))
+        bsp_tree = list()       # we'll unpack the BSP data as a list of chunks
+        
+        while True:
+            block_id = unpack_int(bin_data.read(4))
+            block_size = unpack_int(bin_data.read(4))
+            if block_size:
+                this_block = chunk_dict[block_id]()
+                this_block_data = RawData(bin_data.read(block_size))
+                this_block.read_chunk(this_block_data)
+                bsp_tree.append(this_block)
+            else:       # EOF
+                break
         
     def write_chunk(self):
         pass
@@ -1411,7 +1449,7 @@ class ModelChunk(POFChunk):
     def set_mesh(self, mesh):
         pass
         
-    def make_bsp_tree(self):
+    def _make_bsp_tree(self):
         pass
         
     def __len__(self):
@@ -1483,15 +1521,38 @@ class EndBlock(POFChunk):
         pass
         
     def write_chunk(self):
-        pass
+        return b"\0\0\0\0\0\0\0\0"
         
     def __len__(self):
-        pass
+        return 0
         
 class DefpointsBlock(POFChunk):
     CHUNK_ID = 1
     def read_chunk(self, bin_data):
-        pass
+        num_verts = unpack_int(bin_data.read(4))
+        num_norms = unpack_int(bin_data.read(4))
+        vert_data_offset = unpack_int(bin_data.read(4))
+        
+        norm_counts = list()
+        
+        for i in range(num_verts):
+            norm_counts.append(unpack_byte(bin_data.read(1)))
+            
+        if bin_data.tell() != vert_data_offset:
+            bin_data.seek(vert_data_offset)
+            
+        vert_list = list()
+        vert_norms = list()
+            
+        for i in range(num_verts):
+            vert_list.append(unpack_vector(bin_data.read(12)))
+            vert_norms.append(list())
+            for j in range(norm_counts[i]):
+                vert_norms[i].append(unpack_vector(bin_data.read(12)))
+                
+        self.norm_counts = norm_counts
+        self.vert_list = vert_list
+        self.vert_norms = vert_norms
         
     def write_chunk(self):
         pass
@@ -1502,7 +1563,21 @@ class DefpointsBlock(POFChunk):
 class FlatpolyBlock(POFChunk):
     CHUNK_ID = 2
     def read_chunk(self, bin_data):
-        pass
+        self.normal = unpack_vector(bin_data.read(12))
+        self.center = unpack_vector(bin_data.read(12))
+        self.radius = unpack_float(bin_data.read(4))
+        num_verts = unpack_int(bin_data.read(4))       # should always be 3
+        self.color = unpack_ubyte(bin_data.read(4))         # (r, g, b, pad_byte)
+        
+        vert_list = list()
+        norm_list = list()
+        
+        for i in range(num_verts):
+            vert_list.append(unpack_short(bin_data.read(2)))
+            norm_list.append(unpack_short(bin_data.read(2)))
+            
+        self.vert_list = vert_list
+        self.norm_list = norm_list
         
     def write_chunk(self):
         pass
@@ -1513,7 +1588,27 @@ class FlatpolyBlock(POFChunk):
 class TexpolyBlock(POFChunk):
     CHUNK_ID = 3
     def read_chunk(self, bin_data):
-        pass
+        self.normal = unpack_vector(bin_data.read(12))
+        self.center = unpack_vector(bin_data.read(12))
+        self.radius = unpack_float(bin_data.read(4))
+        num_verts = unpack_int(bin_data.read(4))
+        self.texture_id = unpack_int(bin_data.read(4))
+        
+        vert_list = list()
+        norm_list = list()
+        u = list()
+        v = list()
+        
+        for i in range(num_verts):
+            vert_list.append(unpack_ushort(bin_data.read(2)))
+            norm_list.append(unpack_ushort(bin_data.read(2)))
+            u.append(unpack_float(bin_data.read(4)))
+            v.append(unpack_float(bin_data.read(4)))
+            
+        self.vert_list = vert_list
+        self.norm_list = norm_list
+        self.u = u
+        self.v = v
         
     def write_chunk(self):
         pass
