@@ -1,6 +1,12 @@
 #summary Immediate to-do list--update frequently and strike off items when they have been done.
 #labels Featured,Phase-Implementation
 
+==Immediate to-do list ~Kopachris==
+ * read() methods for BSP blocks
+ * write() methods for BSP blocks
+ * write() method for ModelChunk
+
+==Global to-do list==
  * Add wiki pages
   * File formats
    * ~~POF~~
