@@ -38,23 +38,20 @@
 # LogoChunk
 # GlowpointChunk
 # ShieldCollisionChunk
-# DefpointsBlock
-# EndBlock
-# FlatpolyBlock
-# TmappolyBlock
-# SortnormBlock
-# BoundboxBlock
 ## POF and BSP functions
 # validate_pof()
 # make_defpoints()
 # make_polylist()
 # generate_tree_recursion()
 
+
 from math import sum, fsum, sqrt
 from bintools import *
 from . import VolitionError, FileFormatError
 
+
 ## Exceptions ##
+        
         
 class InvalidChunkError(VolitionError):
     """Exception raised for invalid chunk data.
@@ -69,6 +66,7 @@ class InvalidChunkError(VolitionError):
     def __str__(self):
         return "Invalid chunk data: {}, {}.".format(self.msg, self.chunk)
         
+        
 class InvalidBSPError(VolitionError):
     """Exception raised for invalid BSP data.
     
@@ -81,6 +79,7 @@ class InvalidBSPError(VolitionError):
         
     def __str__(self):
         return "Invalid BSP data: {}, {}.".format(self.msg, self.block)
+        
         
 class GeometryError(VolitionError):
     """Exception raised for invalid geometry of some sort.
@@ -95,6 +94,7 @@ class GeometryError(VolitionError):
     def __str__(self):
         return "Bad geometry: {}, {}.".format(self.msg, self.coords)
         
+        
 class VertListError(GeometryError):
     """Exception raised for an invalid vertex list.
     
@@ -107,6 +107,7 @@ class VertListError(GeometryError):
         
     def __str__(self):
         return "Bad vertex: {}, {}.".format(self.msg, self.vert)
+        
         
 class FaceListError(GeometryError):
     """Exception raised for an invalid face list.
@@ -121,7 +122,9 @@ class FaceListError(GeometryError):
     def __str__(self):
         return "Bad face: {}, {}.".format(self.msg, self.face)
         
+        
 ## Helper types ##
+            
             
 def vector(x = False, y = False, z = False):
     """A sequence of floats.  Returns a tuple.
@@ -134,6 +137,7 @@ def vector(x = False, y = False, z = False):
         return False
     else:
         return (float(x), float(y), float(z))
+        
         
 class Mesh:
     """A Mesh object.
@@ -415,6 +419,7 @@ class Mesh:
         self._vfi = vfi
         self._vei = vei
         
+        
 class Vertex:
     """A Vertex object.
     
@@ -441,6 +446,7 @@ class Vertex:
     def __str__(self):
         return str(self.co)
             
+            
 class Edge:
     def __init__(self, verts, seam = True):
         if not isinstance(verts[0], Vertex) or not isinstance(verts[1], Vertex) or len(verts) != 2:
@@ -464,7 +470,8 @@ class Edge:
         
     def __str__(self):
         return str(self.verts)
-            
+           
+           
 class Face:
     def __init__(self, edge_list, uv=False):
         try:
@@ -549,7 +556,9 @@ class Face:
     def __str__(self):
         return str(self.edges)
             
-## POF chunks ##
+            
+## POF helpers ##
+
 
 chunk_dict = { # chunk or block id : chunk class
               b"HDR2": HeaderChunk,
@@ -590,6 +599,10 @@ class POFChunk:
         
     def __repr__(self):
         return "<POF chunk with ID {}, size {}, and POF version {}>".format(self.CHUNK_ID, len(self), self.pof_ver)
+        
+        
+## POF chunks and BSP blocks ##
+        
         
 class HeaderChunk(POFChunk):
 
@@ -742,6 +755,7 @@ class HeaderChunk(POFChunk):
             pass
         return chunk_length
         
+        
 class TextureChunk(POFChunk):
     CHUNK_ID = b'TXTR'
     def read_chunk(self, bin_data):
@@ -779,6 +793,7 @@ class TextureChunk(POFChunk):
         except AttributeError:
             return 0
             
+            
 class MiscChunk(POFChunk):
     CHUNK_ID = b'PINF'
     def read_chunk(self, bin_data):
@@ -806,6 +821,7 @@ class MiscChunk(POFChunk):
             return chunk_length
         except AttributeError:
             return 0
+            
             
 class PathChunk(POFChunk):
     CHUNK_ID = b'PATH'
@@ -911,6 +927,7 @@ class PathChunk(POFChunk):
         except AttributeError:
             return 0
             
+            
 class SpecialChunk(POFChunk):
     CHUNK_ID = b'SPCL'
     def read_chunk(self, bin_data):
@@ -975,6 +992,7 @@ class SpecialChunk(POFChunk):
             return chunk_length
         except AttributeError:
             return 0
+            
             
 class ShieldChunk(POFChunk):
     CHUNK_ID = b'SHLD'
@@ -1082,6 +1100,7 @@ class ShieldChunk(POFChunk):
         except AttributeError:
             return 0
             
+            
 class EyeChunk(POFChunk):
     CHUNK_ID = b" EYE"
     def read_chunk(self, bin_data):
@@ -1127,6 +1146,7 @@ class EyeChunk(POFChunk):
             chunk_length += 28 * self.num_eyes
         except AttributeError:
             return 0
+    
     
 class GunChunk(POFChunk):           # GPNT and MPNT
     def __init__(self, pof_ver=2117, chunk_id=b'GPNT'):
@@ -1182,6 +1202,7 @@ class GunChunk(POFChunk):           # GPNT and MPNT
             return chunk_length
         except AttributeError:
             return 0
+        
         
 class TurretChunk(POFChunk):           # TGUN and TMIS
     def __init__(self, pof_ver=2117, chunk_id=b'TGUN'):
@@ -1251,6 +1272,7 @@ class TurretChunk(POFChunk):           # TGUN and TMIS
             return chunk_length
         except AttributeError:
             return 0
+        
         
 class DockChunk(POFChunk):
     CHUNK_ID = b"DOCK"
@@ -1329,6 +1351,7 @@ class DockChunk(POFChunk):
             return chunk_length
         except AttributeError:
             return 0
+        
         
 class FuelChunk(POFChunk):
     CHUNK_ID = b"FUEL"
@@ -1414,6 +1437,7 @@ class FuelChunk(POFChunk):
         except AttributeError:
             return 0
         
+        
 class ModelChunk(POFChunk):
     def __init__(self, pof_ver=2117, chunk_id=b'PSPO'):
         if pof_ver >= 2116:
@@ -1482,6 +1506,7 @@ class ModelChunk(POFChunk):
     def __len__(self):
         pass
         
+        
 class SquadChunk(POFChunk):
     CHUNK_ID = b"INSG"
     def read_chunk(self, bin_data):
@@ -1492,6 +1517,7 @@ class SquadChunk(POFChunk):
         
     def __len__(self):
         pass
+        
         
 class CenterChunk(POFChunk):
     CHUNK_ID = b"ACEN"
@@ -1517,6 +1543,7 @@ class CenterChunk(POFChunk):
         except AttributeError:
             return 0
         
+        
 class GlowChunk(POFChunk):
     CHUNK_ID = b"GLOW"
     def read_chunk(self, bin_data):
@@ -1527,7 +1554,8 @@ class GlowChunk(POFChunk):
         
     def __len__(self):
         pass
-        
+      
+      
 class TreeChunk(POFChunk):
     CHUNK_ID = b"SLDC"
     def read_chunk(self, bin_data):
@@ -1542,6 +1570,7 @@ class TreeChunk(POFChunk):
     def __len__(self):
         pass
         
+
 class EndBlock(POFChunk):
     CHUNK_ID = 0
     def read_chunk(self, bin_data):
@@ -1552,6 +1581,7 @@ class EndBlock(POFChunk):
         
     def __len__(self):
         return 0
+
         
 class DefpointsBlock(POFChunk):
     CHUNK_ID = 1
@@ -1565,8 +1595,8 @@ class DefpointsBlock(POFChunk):
         for i in range(num_verts):
             norm_counts.append(unpack_byte(bin_data.read(1)))
             
-        if bin_data.tell() != vert_data_offset:
-            bin_data.seek(vert_data_offset)
+        if bin_data.tell() != vert_data_offset - 8:
+            bin_data.seek(vert_data_offset - 8)
             
         vert_list = list()
         vert_norms = list()
@@ -1623,7 +1653,16 @@ class DefpointsBlock(POFChunk):
         self.vert_norms = vert_norms
         
     def __len__(self):
-        pass
+        chunk_length = 20
+        try:
+            chunk_length += len(self.vert_list) * 13
+            vert_norms = self.vert_norms
+            for i in vert_norms:
+                chunk_length += len(i)
+            return chunk_length
+        except AttributeError:
+            return 0
+        
         
 class FlatpolyBlock(POFChunk):
     CHUNK_ID = 2
@@ -1631,7 +1670,7 @@ class FlatpolyBlock(POFChunk):
         self.normal = unpack_vector(bin_data.read(12))
         self.center = unpack_vector(bin_data.read(12))
         self.radius = unpack_float(bin_data.read(4))
-        num_verts = unpack_int(bin_data.read(4))       # should always be 3
+        num_verts = unpack_int(bin_data.read(4))            # should always be 3
         self.color = unpack_ubyte(bin_data.read(4))         # (r, g, b, pad_byte)
         
         vert_list = list()
@@ -1645,10 +1684,36 @@ class FlatpolyBlock(POFChunk):
         self.norm_list = norm_list
         
     def write_chunk(self):
-        pass
+        chunk = pack_int(self.CHUNK_ID)
+        length = len(self)
+        if length:
+            chunk += pack_int(length)
+        else:
+            return False
+            
+        vert_list = self.vert_list
+        norm_list = self.norm_list
+            
+        chunk += pack_vector(self.normal)
+        chunk += pack_vector(self.center)
+        chunk += pack_float(self.radius)
+        chunk += pack_int(len(self.vert_list))
+        chunk += pack_ubyte(self.color)
+        
+        for n, v in zip(norm_list, vert_list):
+            chunk += pack_short(v)
+            chunk += pack_short(n)
+            
+        return chunk
         
     def __len__(self):
-        pass
+        chunk_length = 44
+        try:
+            chunk_length += 4 * len(vert_list)
+            return chunk_length
+        except AttributeError:
+            return 0
+        
         
 class TexpolyBlock(POFChunk):
     CHUNK_ID = 3
@@ -1676,10 +1741,39 @@ class TexpolyBlock(POFChunk):
         self.v = v
         
     def write_chunk(self):
-        pass
+        chunk = pack_int(self.CHUNK_ID)
+        length = len(self)
+        if length:
+            chunk += pack_int(length)
+        else:
+            return False
+            
+        vert_list = self.vert_list
+        norm_list = self.norm_list
+        u = self.u
+        v = self.v
+            
+        chunk += pack_vector(self.normal)
+        chunk += pack_vector(self.center)
+        chunk += pack_float(self.radius)
+        chunk += pack_int(len(self.vert_list))
+        
+        for i, vert in enumerate(vert_list):
+            chunk += pack_short(vert)
+            chunk += pack_short(norm_list[i])
+            chunk += pack_float(u[i])
+            chunk += pack_float(v[i])
+            
+        return chunk
         
     def __len__(self):
-        pass
+        chunk_length = 40
+        try:
+            chunk_length += 12 * len(vert_list)
+            return chunk_length
+        except AttributeError:
+            return 0
+        
         
 class SortnormBlock(POFChunk):
     CHUNK_ID = 4
@@ -1696,10 +1790,25 @@ class SortnormBlock(POFChunk):
         self.max = unpack_vector(bin_data.read(12))
         
     def write_chunk(self):
-        pass
+        chunk = pack_int(self.CHUNK_ID)
+        hunk += pack_int(80)
+            
+        chunk += pack_vector(self.plane_normal)
+        chunk += pack_vector(self.plane_point)
+        chunk += b'\0\0\0\0'
+        chunk += pack_int(self.front_offset)
+        chunk += pack_int(self.back_offset)
+        chunk += pack_int(self.prelist_offset)
+        chunk += pack_int(self.postlist_offset)
+        chunk += pack_int(self.online_offset)
+        chunk += pack_vector(self.min)
+        chunk += pack_vector(self.max)
+        
+        return chunk
         
     def __len__(self):
-        return 72
+        return 80
+        
         
 class BoundboxBlock(POFChunk):
     CHUNK_ID = 5
@@ -1708,12 +1817,18 @@ class BoundboxBlock(POFChunk):
         self.max = unpack_vector(bin_data.read(12))
         
     def write_chunk(self):
-        pass
+        chunk = [pack_int(self.CHUNK_ID),
+                      pack_int(32),
+                      pack_vector(self.min),
+                      pack_vector(self.min)]
+        return b"".join(chunk)
         
     def __len__(self):
-        return 24
+        return 32
+        
         
 ## Module methods ##
+
 
 def read_pof(pof_file):
     """Takes a file-like object as a required argument, returns a list of chunks."""
@@ -1744,6 +1859,7 @@ def read_pof(pof_file):
             
     return chunk_list
     
+    
 def write_pof(chunk_list, pof_version=2117):
     """Takes a list of chunks as a required argument, returns a bytes object.  Optional argument pof_version specifies
     the POF version (duh).  If any chunk does not use the same version as used for the file, the file might not be
@@ -1757,3 +1873,5 @@ def write_pof(chunk_list, pof_version=2117):
         raw_chunks += chunk.write_chunk()
         
     return b"".join([file_header, raw_chunks])
+
+   
