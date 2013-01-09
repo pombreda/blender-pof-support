@@ -50,7 +50,7 @@
 # make_polylist()
 # generate_tree_recursion()
 
-from math import fsum, sqrt
+from math import sum, fsum, sqrt
 from bintools import *
 from . import VolitionError, FileFormatError
 
@@ -466,11 +466,19 @@ class Edge:
         return str(self.verts)
             
 class Face:
-    def __init__(self, edge_list):
+    def __init__(self, edge_list, uv=False):
         try:
             prev_edge_verts = edge_list[len(edge_list) - 1].verts
         except (AttributeError, ValueError, IndexError, TypeError):
             raise FaceListError(edge_list, "Face must be instantiated from a sequence of Edge objects.")
+            
+        if uv:
+            self.uv = uv
+            
+        # uv should be a list, indexed into vert_list (created later), of size 2 lists, so that:
+        # uv[i][0] is the u coord of list(vert_list)[i]
+        # uv[i][1] is the v coord of list(vert_list)[i]
+        # etc.
             
         for e in edge_list:
             if not isinstance(e, Edge):
@@ -491,15 +499,17 @@ class Face:
         vert_list = set()
         for e in edge_list:
             if e.verts[0] not in vert_list:
-                vert_list.append(e.verts[0])
+                vert_list.add(e.verts[0])
                 verts_x.append(e.verts[0].co[0])
                 verts_y.append(e.verts[0].co[1])
                 verts_z.append(e.verts[0].co[2])
             if e.verts[1] not in vert_list:
-                vert_list.append(e.verts[1])
+                vert_list.add(e.verts[1])
                 verts_x.append(e.verts[1].co[0])
                 verts_y.append(e.verts[1].co[1])
                 verts_z.append(e.verts[1].co[2])
+                
+        self.vert_list = vert_list
                 
         # This assumes polygon is a triangle
         center_x = 1/3 * fsum(verts_x)
@@ -1442,6 +1452,10 @@ class ModelChunk(POFChunk):
         bsp_size = unpack_int(bin_data.read(4))
         bsp_tree = list()       # we'll unpack the BSP data as a list of chunks
         
+        bsp_addr = bin_data.tell()
+        self.bsp_data = bin_data.read(bsp_size)     # for caching purposes
+        bin_data.seek(bsp_addr)
+        
         while True:
             block_id = unpack_int(bin_data.read(4))
             block_size = unpack_int(bin_data.read(4))
@@ -1563,12 +1577,50 @@ class DefpointsBlock(POFChunk):
             for j in range(norm_counts[i]):
                 vert_norms[i].append(unpack_vector(bin_data.read(12)))
                 
-        self.norm_counts = norm_counts
         self.vert_list = vert_list
         self.vert_norms = vert_norms
         
     def write_chunk(self):
-        pass
+        chunk = pack_int(self.CHUNK_ID)
+        length = len(self)
+        if length:
+            chunk += pack_int(length)
+        else:
+            return False
+            
+        vert_list = self.vert_list
+        vert_norms = self.vert_norms
+        num_verts = len(vert_list)
+        num_norms = sum(norm_counts)
+        vert_data_offset = 20 + num_verts
+        
+        chunk += pack_int(num_verts)
+        chunk += pack_int(num_norms)
+        chunk += pack_int(vert_data_offset)
+        
+        for v in vert_norms:
+            chunk += pack_int(len(v))
+            
+        for i, v in enumerate(vert_norms):
+            chunk += pack_vector(vert_list[i])
+            for n in v:
+                chunk += pack_vector(n)
+                
+    def get_mesh(self, m=False):
+        if not m:
+            m = Mesh()
+        m.set_vert_list(self.vert_list, self.vert_norms)
+        
+        return m
+                
+    def set_mesh(self, m):
+        vert_list = m.get_vert_list()
+        vert_norms = list()
+        for v in m.vert_list:
+            vert_norms.append(v.normals)
+            
+        self.vert_list = vert_list
+        self.vert_norms = vert_norms
         
     def __len__(self):
         pass
