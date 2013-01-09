@@ -1632,24 +1632,34 @@ class TexpolyBlock(POFChunk):
 class SortnormBlock(POFChunk):
     CHUNK_ID = 4
     def read_chunk(self, bin_data):
-        pass
+        self.plane_normal = unpack_vector(bin_data.read(12))
+        self.plane_point = unpack_vector(bin_data.read(12))
+        bin_data.seek(4, 1)     # int reserved = 0
+        self.front_offset = unpack_int(bin_data.read(4))
+        self.back_offset = unpack_int(bin_data.read(4))
+        self.prelist_offset = unpack_int(bin_data.read(4))
+        self.postlist_offset = unpack_int(bin_data.read(4))
+        self.online_offset = unpack_int(bin_data.read(4))
+        self.min = unpack_vector(bin_data.read(12))
+        self.max = unpack_vector(bin_data.read(12))
         
     def write_chunk(self):
         pass
         
     def __len__(self):
-        pass
+        return 72
         
 class BoundboxBlock(POFChunk):
     CHUNK_ID = 5
     def read_chunk(self, bin_data):
-        pass
+        self.min = unpack_vector(bin_data.read(12))
+        self.max = unpack_vector(bin_data.read(12))
         
     def write_chunk(self):
         pass
         
     def __len__(self):
-        pass
+        return 24
         
 ## Module methods ##
 
@@ -1670,7 +1680,10 @@ def read_pof(pof_file):
         chunk_id = pof_file.read(4)
         if chunk_id:
             chunk_length = unpack_int(pof_file.read(4))
-            this_chunk = chunk_dict[chunk_id](file_version, chunk_id)
+            try:
+                this_chunk = chunk_dict[chunk_id](file_version, chunk_id)
+            except KeyError:        # skip over unknown chunk
+                pof_file.seek(chunk_length, 1)
             chunk_data = RawData(pof_file.read(chunk_length))
             this_chunk.read_chunk(chunk_data)
             chunk_list.append(this_chunk)
