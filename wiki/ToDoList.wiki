@@ -3,6 +3,9 @@
 
 ==Immediate to-do list ~Kopachris==
  * read_chunk() and write_chunk() for the remaining chunks
+ * get_mesh() and set_mesh() for model chunk
+ * verify_pof()
+ * test script
 
 ==Global to-do list==
  * Add wiki pages
