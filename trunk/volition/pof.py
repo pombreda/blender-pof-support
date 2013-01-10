@@ -35,8 +35,6 @@
     # get_mesh()
     # set_mesh(mesh)
     # make_bsp_tree()
-# LogoChunk
-# GlowpointChunk
 # ShieldCollisionChunk
 ## POF and BSP functions
 # validate_pof()
@@ -1477,7 +1475,7 @@ class ModelChunk(POFChunk):
         bsp_tree = list()       # we'll unpack the BSP data as a list of chunks
         
         bsp_addr = bin_data.tell()
-        self.bsp_data = bin_data.read(bsp_size)     # for caching purposes
+        self.bsp_data = bin_data.read(bsp_size)     # keep a packed version for caching purposes
         bin_data.seek(bsp_addr)
         
         while True:
@@ -1485,38 +1483,192 @@ class ModelChunk(POFChunk):
             block_size = unpack_int(bin_data.read(4))
             if block_size:
                 this_block = chunk_dict[block_id]()
-                this_block_data = RawData(bin_data.read(block_size))
+                this_block_data = RawData(bin_data.read(block_size - 8))
                 this_block.read_chunk(this_block_data)
                 bsp_tree.append(this_block)
             else:       # EOF
                 break
+                
+        self.bsp_tree = bsp_tree
         
     def write_chunk(self):
-        pass
+        chunk = self.CHUNK_ID
+        length = len(self)
+        if length:
+            chunk += pack_int(length)
+        else:
+            return False
+            
+        pof_ver = self.pof_ver
+        
+        chunk += pack_int(self.model_id)
+        
+        if pof_ver >= 2116:
+            chunk += pack_float(self.radius)
+            chunk += pack_int(self.parent_id)
+            chunk += pack_vector(self.offset)
+        else:
+            chunk += pack_int(self.parent_id)
+            chunk += pack_vector(self.offset)
+            chunk += pack_float(self.radius)
+            
+        chunk += pack_vector(self.center)
+        chunk += pack_vector(self.min)
+        chunk += pack_vector(self.max)
+        
+        chunk += pack_string(self.name)
+        chunk += pack_string(self.properties)
+        chunk += pack_int(self.movement_type)
+        chunk += pack_int(self.movement_axis)
+        chunk += b'\0\0\0\0'
+        
+        bsp_data = b""
+        bsp_tree = self.bsp_tree
+        
+        for block in bsp_tree:
+            bsp_data += block.write_chunk()
+            
+        chunk += pack_int(len(bsp_data))
+        chunk += bsp_data
+        
+        return chunk
         
     def get_mesh(self):
         pass
         
-    def set_mesh(self, mesh):
+    def set_mesh(self, m):
+        # Basically:
+        # defpoints = DefpointsBlock()
+        # defpoints.set_mesh(m)
+        # self._defpoints = defpoints
+        # polylist = self._make_polylist(m)
+        # self._polylist = polylist
+        # self._generate_tree_recursion()
+        # self.bsp_tree = self._defpoints + self._polylist
         pass
         
-    def _make_bsp_tree(self):
+    def _generate_tree_recursion(self):
         pass
         
     def __len__(self):
-        pass
+        chunk_length = 84
+        try:
+            chunk_length += len(self.submodel_name)
+            chunk_length += len(self.properties)
+            bsp_tree = self.bsp_tree
+            for block in bsp_tree:
+                chunk_length += len(block)
+            return chunk_length
+        except AttributeError:
+            return 0
         
         
 class SquadChunk(POFChunk):
     CHUNK_ID = b"INSG"
     def read_chunk(self, bin_data):
-        pass
+        num_insig = unpack_int(bin_data.read(4))
+        insig_detail_level = list()
+        vert_list = list()
+        insig_offset = list()
+        face_list = list()
+        u_list = list()
+        v_list = list()
+        
+        for i in range(num_insig):
+            insig_detail_level.append(unpack_int(bin_data.read(4)))
+            num_faces = unpack_int(bin_data.read(4))
+            num_verts = unpack_int(bin_data.read(4))
+            vert_list.append(list())
+            
+            for j in range(num_verts):
+                vert_list[i].append(unpack_vector(bin_data.read(12)))
+                
+            insig_offset.append(unpack_vector(bin_data.read(12)))
+            face_list.append(list())
+            u_list.append(list())
+            v_list.append(list())
+            
+            for j in range(num_faces):
+                face_list[i].append(list())
+                u_list[i].append(list())
+                v_list[i].append(list())
+                
+                for k in range(3):
+                    face_list[i][j].append(unpack_int(bin_data.read(4)))
+                    u_list[i][j].append(unpack_float(bin_data.read(4)))
+                    v_list[i][j].append(unpack_float(bin_data.read(4)))
+                    
+        self.insig_detail_level = insig_detail_level
+        self.vert_list = vert_list
+        self.insig_offset = insig_offset
+        self.face_list = face_list
+        self.u_list = u_list
+        self.v_list = v_list
         
     def write_chunk(self):
+        chunk = self.CHUNK_ID
+        length = len(self)
+        if length:
+            chunk += pack_int(length)
+        else:
+            return False
+            
+        insig_detail_level = self.insig_detail_level
+        vert_list = self.vert_list
+        insig_offset = self.insig_offset
+        face_list = self.face_list
+        u_list = self.u_list
+        v_list = self.v_list
+        
+        num_insig = len(vert_list)
+        chunk += pack_int(num_insig)
+        
+        for i in range(num_insig):
+            chunk += pack_int(insig_detail_level[i])
+            num_faces = len(face_list[i])
+            num_verts = len(vert_list[i])
+            chunk += pack_int(num_faces)
+            chunk += pack_int(num_verts)
+            
+            for v in vert_list[i]:
+                chunk += pack_vector(v)
+                
+            chunk += pack_vector(insig_offset[i])
+            
+            for j, f in enumerate(face_list[i]):
+                for k in range(3):
+                    chunk += pack_int(f[k])
+                    chunk += pack_float(u_list[i][j][k])
+                    chunk += pack_float(v_list[i][j][k])
+                    
+        return chunk
+        
+    def get_mesh(self, insig_id=None):
+        # if insig_id is None:
+            # get all insignia,
+            # return a list of Mesh objects
+        pass
+        
+    def set_mesh(self, m, insig_id=None, insig_detail_level=False):
+        # if insig_id is None:
+            # m is a list of Mesh objects
+            # insig_detail_level must be a list of detail levels
+            # set all insignia
         pass
         
     def __len__(self):
-        pass
+        chunk_length = 4
+        try:
+            vert_list = self.vert_list
+            face_list = self.face_list
+            chunk_length += 24 * len(vert_list)
+            for i in vert_list:
+                chunk_length += 12 * len(i)
+            for i in face_list:
+                chunk_length += 36 * len(i)
+            return chunk_length
+        except AttributeError:
+            return 0
         
         
 class CenterChunk(POFChunk):
@@ -1547,19 +1699,102 @@ class CenterChunk(POFChunk):
 class GlowChunk(POFChunk):
     CHUNK_ID = b"GLOW"
     def read_chunk(self, bin_data):
-        pass
+        num_banks = unpack_int(bin_data.read(4))
+        disp_time = list()
+        on_time = list()
+        off_time = list()
+        parent_id = list()
+        properties = list()
+        
+        glow_points = list()
+        glow_norms = list()
+        glow_radius = list()
+        
+        for i in range(num_banks):
+            disp_time.append(unpack_int(bin_data.read(4)))
+            on_time.append(unpack_int(bin_data.read(4)))
+            off_time.append(unpack_int(bin_data.read(4)))
+            parent_id.append(unpack_int(bin_data.read(4)))
+            bin_data.seek(8, 1)
+            num_glows = unpack_int(bin_data.read(4))
+            str_len = unpack_int(bin_data.read(4))
+            properties.append(bin_data.read(str_len))
+            
+            glow_points.append(list())
+            glow_norms.append(list())
+            glow_radius.append(list())
+            
+            for j in range(num_glows):
+                glow_points[i].append(unpack_vector(bin_data.read(12)))
+                glow_norms[i].append(unpack_vector(bin_data.read(12)))
+                glow_radius[i].append(unpack_float(bin_data.read(4)))
+                
+        self.disp_time = disp_time
+        self.on_time = on_time
+        self.off_time = off_time
+        self.parent_id = parent_id
+        self.properties = properties
+        self.glow_points = glow_points
+        self.glow_norms = glow_norms
+        self.glow_radius = glow_radius
         
     def write_chunk(self):
-        pass
+        chunk = self.CHUNK_ID
+        length = len(self)
+        if length:
+            chunk += pack_int(length)
+        else:
+            return False
+            
+        disp_time = self.disp_time
+        on_time = self.on_time
+        off_time = self.off_time
+        parent_id = self.parent_id
+        properties = self.properties
+        glow_points = self.glow_points
+        glow_norms = self.glow_norms
+        glow_radius = self.glow_radius
         
+        num_banks = len(glow_points)
+        chunk += pack_int(num_banks)
+        
+        for i in range(num_banks):
+            num_glows = len(glow_points[i])
+            chunk += b"".join(pack_int([disp_time[i],
+                                        on_time[i],
+                                        off_time[i],
+                                        parent_id[i],
+                                        0,
+                                        0,
+                                        num_glows]))
+            chunk += pack_string(properties[i])
+            for j in range(num_glows):
+                chunk += pack_vector(glow_points[i][j])
+                chunk += pack_vector(glow_norms[i][j])
+                chunk += pack_float(glow_radius[i][j])
+                
+        return chunk
+            
     def __len__(self):
-        pass
+        chunk_length = 4
+        try:
+            glow_points = self.glow_points
+            properties = self.properties
+            chunk_length += 28 * len(glow_points)
+            for s in properties:
+                chunk_length += 4 + len(s)
+            for p in glow_points:
+                chunk_length += 28 * len(p)
+            return chunk_length
+        except AttributeError:
+            return 0
       
       
 class TreeChunk(POFChunk):
     CHUNK_ID = b"SLDC"
     def read_chunk(self, bin_data):
-        pass
+        tree_size = unpack_uint(bin_data.read(4))
+        
         
     def write_chunk(self):
         pass
