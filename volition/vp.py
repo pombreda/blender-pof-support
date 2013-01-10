@@ -28,7 +28,7 @@ import logging
 from bintools import *
 from . import VolitionError, FileFormatError
 
-logging.basicConfig(filename="vp.log", level=logging.DEBUG)
+# logging.basicConfig(filename="vp.log", level=logging.DEBUG)
 
 class FileNotFoundError(VolitionError):
     def __init__(self, path, msg):
