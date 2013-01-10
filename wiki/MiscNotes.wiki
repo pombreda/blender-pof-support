@@ -87,3 +87,23 @@ The exporter will provide a field for custom PINF data (e.g. for a copyright sta
 "Total compile time was {}ms, tree generation time was {}ms".format(pof_time, bsp_time)
 }}}
 Timing information will be calculated using a series of calls to `datetime.now()` and getting the time difference.
+
+==Things that should have their own classes==
+First rewrite, I'm going to make classes for each of these and have chunk objects deal with lists of these objects:
+ * GenericPoint (position, normal)
+ * GenericSpacePoint (position, radius, normal=False)
+ * Path
+ * PathVertex(GenericSpacePoint)
+ * Subsystem(GenericSpacePoint)
+ * Eye(GenericPoint)
+ * GunSlot
+ * GunPoint(GenericPoint)
+ * TurretBank
+ * TurretPoint(GenericPoint)
+ * Dock
+ * DockPoint(GenericPoint)
+ * Thruster
+ * ThrusterGlow(GenericSpacePoint)
+ * Insignia
+ * GlowBank
+ * GlowPoint(GenericSpacePoint)
