@@ -107,3 +107,10 @@ First rewrite, I'm going to make classes for each of these and have chunk object
  * Insignia
  * GlowBank
  * GlowPoint(GenericSpacePoint)
+
+==Collision trees==
+Here's how they work:
+ * Define a function to check for a collision with the current node
+ * If yes, the function calls itself (i.e. recursively) on the front_list (child nodes)
+ * If no, the function calls itself on the back_list (sibling node and its children)
+If we had to check _every_ face, we'd have to check for collision 80 times for a shield mesh.  Instead, for the same size mesh, we only have to check for collision about 8 times.
