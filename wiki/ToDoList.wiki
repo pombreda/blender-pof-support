@@ -2,10 +2,9 @@
 #labels Featured,Phase-Implementation
 
 ==Immediate to-do list ~Kopachris==
- * read_chunk() and write_chunk() for the remaining chunks
+ * Shield collision tree chunk
  * get_mesh() and set_mesh() for model chunk
  * verify_pof()
- * test script
 
 ==Global to-do list==
  * Add wiki pages
