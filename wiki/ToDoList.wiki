@@ -46,11 +46,11 @@
     * ~~Dock points~~
     * ~~Thruster glows~~
     * Subobjects
-    * Insignia
+    * ~~Insignia~~
     * ~~Autocentering~~
-    * Glow points
+    * ~~Glow points~~
     * Shield mesh collision tree
-    * BSP data blocks
+    * ~~BSP data blocks~~
 
 ==Goals for the far distant future==
  * Calculate moment of inertia during export
