@@ -43,9 +43,12 @@
 # generate_tree_recursion()
 
 
-from math import sum, fsum, sqrt
-from bintools import *
+from math import fsum, sqrt
+from .bintools import *
 from . import VolitionError, FileFormatError
+import logging
+
+logging.basicConfig(filename="pof.log", level=logging.DEBUG)
 
 
 ## Exceptions ##
@@ -93,7 +96,7 @@ class GeometryError(VolitionError):
         return "Bad geometry: {}, {}.".format(self.msg, self.coords)
         
         
-class VertListError(GeometryError):
+class VertListError(VolitionError):
     """Exception raised for an invalid vertex list.
     
     Attributes:
@@ -391,7 +394,7 @@ class Mesh:
             fvi[i] = fv
             
         for i, e in enumerate(edges):
-            evi[i] = set(verts.index(e.verts[0]), verts.index(e.verts[1])
+            evi[i] = set(verts.index(e.verts[0]), verts.index(e.verts[1]))
             ef = set()
             for j, k in fei:
                 if i in k:
@@ -558,34 +561,6 @@ class Face:
 ## POF helpers ##
 
 
-chunk_dict = { # chunk or block id : chunk class
-              b"HDR2": HeaderChunk,
-              b"OHDR": HeaderChunk,
-              b"TXTR": TextureChunk,
-              b"PINF": MiscChunk,
-              b"PATH": PathChunk,
-              b"SPCL": SpecialChunk,
-              b"SHLD": ShieldChunk,
-              b" EYE": EyeChunk,
-              b"GPNT": GunChunk,
-              b"MPNT": GunChunk,
-              b"TGUN": TurretChunk,
-              b"TMIS": TurretChunk,
-              b"DOCK": DockChunk,
-              b"FUEL": FuelChunk,
-              b"SOBJ": ModelChunk,
-              b"OBJ2": ModelChunk,
-              b"INSG": SquadChunk,
-              b"ACEN": CenterChunk,
-              b"GLOW": GlowChunk,
-              b"SLDC": TreeChunk,
-              0: EndBlock,
-              1: DefpointsBlock,
-              2: FlatpolyBlock,
-              3: TexpolyBlock,
-              4: SortnormBlock,
-              5: BoundboxBlock}
-
 class POFChunk:
     """Base class for all POF chunks.  Calling len() on a chunk will return the estimated size of the packed binary chunk, minus chunk header."""
     CHUNK_ID = b"PSPO"
@@ -618,6 +593,7 @@ class HeaderChunk(POFChunk):
             self.CHUNK_ID = b'OHDR'
             
     def read_chunk(self, bin_data):
+        #logging.debug("Reading header chunk...")
         if self.pof_ver >= 2116:        # FreeSpace 2
             self.max_radius = unpack_float(bin_data.read(4))
             self.obj_flags = unpack_int(bin_data.read(4))
@@ -676,6 +652,8 @@ class HeaderChunk(POFChunk):
             chunk += pack_int(length)
         else:
             return False
+            
+        logging.debug("Writing header chunk with size {}...".format(length))
         
         if self.pof_ver >= 2116:
             chunk += pack_float(self.max_radius)
@@ -711,7 +689,7 @@ class HeaderChunk(POFChunk):
                 chunk += pack_float(cross_section_depth[i])
                 chunk += pack_float(cross_section_radius[i])
                 
-        if self.pof_ver >= 2007
+        if self.pof_ver >= 2007:
             light_locations = self.light_locations
             light_types = self.light_types
             num_lights = len(light_locations)
@@ -725,7 +703,7 @@ class HeaderChunk(POFChunk):
     def __len__(self):
         # Could cause trouble if required POF data isn't actually defined,
         # in which case, WHY ARE YOU TRYING TO WRITE A POF FILE?!
-        chunk_length = 44        # Chunk Size
+        chunk_length = 52        # Chunk Size
         try:
             if self.sobj_detail_levels:
                 chunk_length += 4 * self.num_detail_levels
@@ -745,18 +723,19 @@ class HeaderChunk(POFChunk):
             if self.cross_section_depth:
                 chunk_length += 4 + len(self.cross_section_depth) * 8
         except AttributeError:
-            pass
+            chunk_length += 4
         try:
             if self.light_locations:
                 chunk_length += 4 + len(self.light_locations) * 16
         except AttributeError:
-            pass
+            chunk_length += 4
         return chunk_length
         
         
 class TextureChunk(POFChunk):
     CHUNK_ID = b'TXTR'
     def read_chunk(self, bin_data):
+        #logging.debug("Reading texture chunk...")
         num_textures = unpack_int(bin_data.read(4))
         textures = list()
         for i in range(num_textures):
@@ -771,6 +750,8 @@ class TextureChunk(POFChunk):
             chunk += pack_int(length)
         else:
             return False
+            
+        logging.debug("Writing texture chunk with size {}...".format(length))
             
         textures = self.textures
         
@@ -795,15 +776,18 @@ class TextureChunk(POFChunk):
 class MiscChunk(POFChunk):
     CHUNK_ID = b'PINF'
     def read_chunk(self, bin_data):
+        #logging.debug("Reading PINF chunk...")
         self.lines = bin_data.read().split(b'\0')
         
-    def write_chunk(self)
+    def write_chunk(self):
         chunk = self.CHUNK_ID
         length = len(self)
         if length:
             chunk += pack_int(length)
         else:
             return False
+            
+        logging.debug("Writing PINF chunk with size {}...".format(length))
         
         chunk += b"\0".join(self.lines) + b"\0"
         
@@ -824,6 +808,7 @@ class MiscChunk(POFChunk):
 class PathChunk(POFChunk):
     CHUNK_ID = b'PATH'
     def read_chunk(self, bin_data):
+        #logging.debug("Reading path chunk...")
         num_paths = unpack_int(bin_data.read(4))
         
         path_names = list()
@@ -871,6 +856,8 @@ class PathChunk(POFChunk):
             chunk += pack_int(length)
         else:
             return False
+            
+        logging.debug("Writing path chunk with size {}...".format(length))
         
         path_names = self.path_names
         path_parents = self.path_parents
@@ -895,11 +882,11 @@ class PathChunk(POFChunk):
                 chunk += pack_float(vert_list[i][j])
                 chunk += pack_float(vert_rad[i][j])
                 
-                num_turrets = len(sobj_number[i][j])
+                num_turrets = len(turret_sobj_num[i][j])
                 chunk += pack_int(num_turrets)
                 
                 for k in range(num_turrets):
-                    chunk += pack_int(sobj_number[i][j][k])
+                    chunk += pack_int(turret_sobj_num[i][j][k])
                     
         return chunk
         
@@ -909,7 +896,7 @@ class PathChunk(POFChunk):
             
             path_names = self.path_names
             path_parents = self.path_parents
-            sobj_number = self.sobj_number
+            turret_sobj_num = self.turret_sobj_num
             vert_list = self.vert_list
             
             for i in range(len(path_names)):
@@ -919,7 +906,7 @@ class PathChunk(POFChunk):
                 
                 for j in range(len(vert_list[i])):
                     chunk_length += 20
-                    chunk_length += 4 * len(sobj_number[i][j])
+                    chunk_length += 4 * len(turret_sobj_num[i][j])
                     
             return chunk_length
         except AttributeError:
@@ -929,6 +916,7 @@ class PathChunk(POFChunk):
 class SpecialChunk(POFChunk):
     CHUNK_ID = b'SPCL'
     def read_chunk(self, bin_data):
+        #logging.debug("Reading special point chunk...")
         num_special_points = unpack_int(bin_data.read(4))
         
         point_names = list()
@@ -958,6 +946,8 @@ class SpecialChunk(POFChunk):
             chunk += pack_int(length)
         else:
             return False
+            
+        logging.debug("Writing special point chunk with size {}...".format(length))
         
         point_names = self.point_names
         point_properties = self.point_properties
@@ -995,7 +985,9 @@ class SpecialChunk(POFChunk):
 class ShieldChunk(POFChunk):
     CHUNK_ID = b'SHLD'
     def read_chunk(self, bin_data):
+        #logging.debug("Reading shield chunk...")
         num_verts = unpack_int(bin_data.read(4))
+        #logging.debug("Number of verts {}".format(num_verts))
         
         vert_list = list()
         
@@ -1016,7 +1008,7 @@ class ShieldChunk(POFChunk):
             face_neighbors.append(unpack_int(bin_data.read(12)))
             
         self.face_normals = face_normals
-        self.face_list = face_verts
+        self.face_list = face_list
         self.face_neighbors = face_neighbors
             
     def write_chunk(self):
@@ -1026,6 +1018,8 @@ class ShieldChunk(POFChunk):
             chunk += pack_int(length)
         else:
             return False
+            
+        logging.debug("Writing shield chunk with size {}...".format(length))
         
         vert_list = self.vert_list
         num_verts = len(vert_list)
@@ -1102,6 +1096,7 @@ class ShieldChunk(POFChunk):
 class EyeChunk(POFChunk):
     CHUNK_ID = b" EYE"
     def read_chunk(self, bin_data):
+        #logging.debug("Reading eye chunk...")
         num_eyes = unpack_int(bin_data.read(4))
         sobj_num = list()
         eye_offset = list()
@@ -1110,7 +1105,7 @@ class EyeChunk(POFChunk):
         for i in range(num_eyes):
             sobj_num.append(unpack_int(bin_data.read(4)))
             eye_offset.append(unpack_vector(bin_data.read(12)))
-            eye_normal.append(unpack_rector(bin_data.read(12)))
+            eye_normal.append(unpack_vector(bin_data.read(12)))
             
         self.sobj_num = sobj_num
         self.eye_offset = eye_offset
@@ -1123,6 +1118,8 @@ class EyeChunk(POFChunk):
             chunk += pack_int(length)
         else:
             return False
+            
+        logging.debug("Writing eye chunk with size {}...".format(length))
         
         sobj_num = self.sobj_num
         eye_offset = self.eye_offset
@@ -1133,15 +1130,16 @@ class EyeChunk(POFChunk):
         
         for i in range(num_eyes):
             chunk += pack_int(sobj_num[i])
-            chunk += pack_vector(eye_offset[i])
-            chunk += pack_vector(eye_normal[i])
+            chunk += pack_float(eye_offset[i])
+            chunk += pack_float(eye_normal[i])
             
         return chunk
         
     def __len__(self):
         try:
             chunk_length = 4
-            chunk_length += 28 * self.num_eyes
+            chunk_length += 28 * len(self.eye_normal)
+            return chunk_length
         except AttributeError:
             return 0
     
@@ -1152,6 +1150,7 @@ class GunChunk(POFChunk):           # GPNT and MPNT
         self.CHUNK_ID = chunk_id
         
     def read_chunk(self, bin_data):
+        #logging.debug("Reading gun point chunk...")
         num_banks = unpack_int(bin_data.read(4))
         gun_points = list()
         gun_norms = list()
@@ -1162,7 +1161,7 @@ class GunChunk(POFChunk):           # GPNT and MPNT
             gun_norms.append(list())
             for j in range(num_guns):
                 gun_points[i].append(unpack_vector(bin_data.read(12)))
-                gun_norms.append(unpack_vector(bin_data.read(12)))
+                gun_norms[i].append(unpack_vector(bin_data.read(12)))
                 
         self.gun_points = gun_points
         self.gun_norms = gun_norms        
@@ -1174,6 +1173,8 @@ class GunChunk(POFChunk):           # GPNT and MPNT
             chunk += pack_int(length)
         else:
             return False
+            
+        logging.debug("Writing gun chunk with size {}...".format(length))
         
         gun_points = self.gun_points
         gun_norms = self.gun_norms
@@ -1183,19 +1184,20 @@ class GunChunk(POFChunk):           # GPNT and MPNT
         
         for i in range(num_banks):
             num_guns = len(gun_points[i])
-            chunk += pack_int(num_guns[i])
+            chunk += pack_int(num_guns)
             for j in range(num_guns):
-                chunk += pack_vector(gun_points[i][j])
-                chunk += pack_vector(gun_norms[i][j])
+                chunk += pack_float(gun_points[i][j])
+                chunk += pack_float(gun_norms[i][j])
                 
         return chunk
         
     def __len__(self):
         try:
             chunk_length = 4
+            gun_points = self.gun_points
             num_banks = len(gun_points)
-            for i in range(num_banks)
-                num_guns = len(self.gun_points[i])
+            for i in range(num_banks):
+                num_guns = len(gun_points[i])
                 chunk_length += 4 + 24 * num_guns
             return chunk_length
         except AttributeError:
@@ -1208,6 +1210,7 @@ class TurretChunk(POFChunk):           # TGUN and TMIS
         self.CHUNK_ID = chunk_id
         
     def read_chunk(self, bin_data):
+        #logging.debug("Reading turret chunk...")
         num_banks = unpack_int(bin_data.read(4))
         
         barrel_sobj = list()
@@ -1229,7 +1232,7 @@ class TurretChunk(POFChunk):           # TGUN and TMIS
         self.barrel_sobj = barrel_sobj
         self.base_sobj = base_sobj
         self.turret_norm = turret_norm
-        self.firing_points = firing points
+        self.firing_points = firing_points
         
     def write_chunk(self):
         chunk = self.CHUNK_ID
@@ -1238,6 +1241,8 @@ class TurretChunk(POFChunk):           # TGUN and TMIS
             chunk += pack_int(length)
         else:
             return False
+            
+        logging.debug("Writing turret chunk with size {}...".format(length))
         
         barrel_sobj = self.barrel_sobj
         base_sobj = self.base_sobj
@@ -1251,13 +1256,13 @@ class TurretChunk(POFChunk):           # TGUN and TMIS
         for i in range(self.num_banks):
             chunk += pack_int(barrel_sobj[i])
             chunk += pack_int(base_sobj[i])
-            chunk += pack_vector(turret_norm[i])
+            chunk += pack_float(turret_norm[i])
             
             num_firing_points = len(firing_points[i])
             chunk += pack_int(num_firing_points)
             
             for p in firing_points[i]:
-                chunk += pack_vector(p)
+                chunk += pack_float(p)
                 
         return chunk
         
@@ -1275,6 +1280,7 @@ class TurretChunk(POFChunk):           # TGUN and TMIS
 class DockChunk(POFChunk):
     CHUNK_ID = b"DOCK"
     def read_chunk(self, bin_data):
+        #logging.debug("Reading dock chunk...")
         num_docks = unpack_int(bin_data.read(4))
         
         dock_properties = list()
@@ -1313,6 +1319,8 @@ class DockChunk(POFChunk):
             chunk += pack_int(length)
         else:
             return False
+            
+        logging.debug("Writing dock chunk with size {}...".format(length))
         
         dock_properties = self.dock_properties
         path_id = self.path_id
@@ -1325,14 +1333,14 @@ class DockChunk(POFChunk):
         for i in range(num_docks):
             chunk += pack_string(dock_properties[i])
             num_paths = len(path_id[i])
-            chunk += pack_int(num_paths[i])
+            chunk += pack_int(num_paths)
             for j in range(num_paths):
-                chunk += pack_int(pack_id[i][j])
+                chunk += pack_int(path_id[i][j])
             num_points = len(points[i])
             chunk += pack_int(num_points)
             for j in range(num_points):
-                chunk += pack_vector(points[i][j])
-                chunk += pack_vector(point_norms[i][j])
+                chunk += pack_float(points[i][j])
+                chunk += pack_float(point_norms[i][j])
                 
         return chunk
         
@@ -1354,6 +1362,7 @@ class DockChunk(POFChunk):
 class FuelChunk(POFChunk):
     CHUNK_ID = b"FUEL"
     def read_chunk(self, bin_data):
+        #logging.debug("Reading thruster chunk...")
         pof_ver = self.pof_ver
         num_thrusters = unpack_int(bin_data.read(4))
         
@@ -1394,6 +1403,8 @@ class FuelChunk(POFChunk):
         else:
             return False
             
+        logging.debug("Writing thruster chunk with size {}...".format(length))
+            
         pof_ver = self.pof_ver
         
         if pof_ver >= 2117:
@@ -1411,8 +1422,8 @@ class FuelChunk(POFChunk):
             if pof_ver >= 2117:
                 chunk += pack_string(thruster_properties[i])
             for j in range(num_glows):
-                chunk += pack_vector(glow_pos[i][j])
-                chunk += pack_vector(glow_norm[i][j])
+                chunk += pack_float(glow_pos[i][j])
+                chunk += pack_float(glow_norm[i][j])
                 chunk += pack_float(glow_radius[i][j])
                 
         return chunk
@@ -1465,7 +1476,8 @@ class ModelChunk(POFChunk):
         
         str_len = unpack_int(bin_data.read(4))
         self.name = bin_data.read(str_len)
-        slr_len = unpack_int(bin_data.read(4))
+        logging.debug("Unpacking submodel {}, ID {}".format(self.name, self.model_id))
+        str_len = unpack_int(bin_data.read(4))
         self.properties = bin_data.read(str_len)
         self.movement_type = unpack_int(bin_data.read(4))
         self.movement_axis = unpack_int(bin_data.read(4))
@@ -1478,13 +1490,23 @@ class ModelChunk(POFChunk):
         self.bsp_data = bin_data.read(bsp_size)     # keep a packed version for caching purposes
         bin_data.seek(bsp_addr)
         
+        logging.debug("BSP data size {}".format(bsp_size))
+        
         while True:
-            block_id = unpack_int(bin_data.read(4))
-            block_size = unpack_int(bin_data.read(4))
-            if block_size:
-                this_block = chunk_dict[block_id]()
-                this_block_data = RawData(bin_data.read(block_size - 8))
-                this_block.read_chunk(this_block_data)
+            block_addr = bin_data.tell()
+            eof_test = bin_data.read(4)
+            bin_data.seek(block_addr)
+            if eof_test != b"":
+                block_id = unpack_int(bin_data.read(4))
+                block_size = unpack_int(bin_data.read(4))
+                #logging.debug("{} {}".format(block_id, block_size))
+                #logging.debug("BSP block ID {} with size {}".format(block_id, block_size))
+                if block_id != 0:
+                    this_block = chunk_dict[block_id]()
+                    this_block_data = RawData(bin_data.read(block_size - 8))
+                    this_block.read_chunk(this_block_data)
+                else:
+                    this_block = EndBlock()
                 bsp_tree.append(this_block)
             else:       # EOF
                 break
@@ -1499,6 +1521,8 @@ class ModelChunk(POFChunk):
         else:
             return False
             
+        logging.debug("Writing model chunk with size {}...".format(length))
+            
         pof_ver = self.pof_ver
         
         chunk += pack_int(self.model_id)
@@ -1506,15 +1530,15 @@ class ModelChunk(POFChunk):
         if pof_ver >= 2116:
             chunk += pack_float(self.radius)
             chunk += pack_int(self.parent_id)
-            chunk += pack_vector(self.offset)
+            chunk += pack_float(self.offset)
         else:
             chunk += pack_int(self.parent_id)
-            chunk += pack_vector(self.offset)
+            chunk += pack_float(self.offset)
             chunk += pack_float(self.radius)
             
-        chunk += pack_vector(self.center)
-        chunk += pack_vector(self.min)
-        chunk += pack_vector(self.max)
+        chunk += pack_float(self.center)
+        chunk += pack_float(self.min)
+        chunk += pack_float(self.max)
         
         chunk += pack_string(self.name)
         chunk += pack_string(self.properties)
@@ -1526,8 +1550,10 @@ class ModelChunk(POFChunk):
         bsp_tree = self.bsp_tree
         
         for block in bsp_tree:
+            #logging.debug("{} {}".format(block.CHUNK_ID, len(block)))
             bsp_data += block.write_chunk()
             
+        logging.debug("And BSP data size {}...".format(len(bsp_data)))
         chunk += pack_int(len(bsp_data))
         chunk += bsp_data
         
@@ -1553,11 +1579,14 @@ class ModelChunk(POFChunk):
     def __len__(self):
         chunk_length = 84
         try:
-            chunk_length += len(self.submodel_name)
+            chunk_length += len(self.name)
             chunk_length += len(self.properties)
             bsp_tree = self.bsp_tree
             for block in bsp_tree:
-                chunk_length += len(block)
+                if block.CHUNK_ID == 0:
+                    chunk_length += 8
+                else:
+                    chunk_length += len(block)
             return chunk_length
         except AttributeError:
             return 0
@@ -1566,6 +1595,7 @@ class ModelChunk(POFChunk):
 class SquadChunk(POFChunk):
     CHUNK_ID = b"INSG"
     def read_chunk(self, bin_data):
+        #logging.debug("Reading insignia chunk...")
         num_insig = unpack_int(bin_data.read(4))
         insig_detail_level = list()
         vert_list = list()
@@ -1613,6 +1643,8 @@ class SquadChunk(POFChunk):
         else:
             return False
             
+        logging.debug("Writing insignia chunk with size {}...".format(length))
+            
         insig_detail_level = self.insig_detail_level
         vert_list = self.vert_list
         insig_offset = self.insig_offset
@@ -1631,9 +1663,9 @@ class SquadChunk(POFChunk):
             chunk += pack_int(num_verts)
             
             for v in vert_list[i]:
-                chunk += pack_vector(v)
+                chunk += pack_float(v)
                 
-            chunk += pack_vector(insig_offset[i])
+            chunk += pack_float(insig_offset[i])
             
             for j, f in enumerate(face_list[i]):
                 for k in range(3):
@@ -1674,6 +1706,7 @@ class SquadChunk(POFChunk):
 class CenterChunk(POFChunk):
     CHUNK_ID = b"ACEN"
     def read_chunk(self, bin_data):
+        #logging.debug("Reading autocenter chunk...")
         self.co = unpack_vector(bin_data.read(12))
         
     def write_chunk(self):
@@ -1684,7 +1717,9 @@ class CenterChunk(POFChunk):
         else:
             return False
             
-        chunk += pack_vector(self.co)
+        logging.debug("Writing center chunk with size {}...".format(length))
+            
+        chunk += pack_float(self.co)
         
         return chunk
         
@@ -1699,6 +1734,7 @@ class CenterChunk(POFChunk):
 class GlowChunk(POFChunk):
     CHUNK_ID = b"GLOW"
     def read_chunk(self, bin_data):
+        #logging.debug("Reading glowpoint chunk...")
         num_banks = unpack_int(bin_data.read(4))
         disp_time = list()
         on_time = list()
@@ -1746,6 +1782,8 @@ class GlowChunk(POFChunk):
         else:
             return False
             
+        logging.debug("Writing glowpoint chunk with size {}...".format(length))
+            
         disp_time = self.disp_time
         on_time = self.on_time
         off_time = self.off_time
@@ -1760,17 +1798,17 @@ class GlowChunk(POFChunk):
         
         for i in range(num_banks):
             num_glows = len(glow_points[i])
-            chunk += b"".join(pack_int([disp_time[i],
-                                        on_time[i],
-                                        off_time[i],
-                                        parent_id[i],
-                                        0,
-                                        0,
-                                        num_glows]))
+            chunk += pack_int([disp_time[i],
+                               on_time[i],
+                               off_time[i],
+                               parent_id[i],
+                               0,
+                               0,
+                               num_glows])
             chunk += pack_string(properties[i])
             for j in range(num_glows):
-                chunk += pack_vector(glow_points[i][j])
-                chunk += pack_vector(glow_norms[i][j])
+                chunk += pack_float(glow_points[i][j])
+                chunk += pack_float(glow_norms[i][j])
                 chunk += pack_float(glow_radius[i][j])
                 
         return chunk
@@ -1793,17 +1831,18 @@ class GlowChunk(POFChunk):
 class TreeChunk(POFChunk):
     CHUNK_ID = b"SLDC"
     def read_chunk(self, bin_data):
-        tree_size = unpack_uint(bin_data.read(4))
-        
+        logging.debug("Not actually reading shield collision tree, but found it...")
+        self.bin_data = bin_data.read()
         
     def write_chunk(self):
-        pass
+        logging.debug("Writing shield collision tree with size {}...".format(len(self)))
+        return b"".join([self.CHUNK_ID, pack_int(len(self)), self.bin_data])
         
     def make_shield_collision_tree(self, shield_chunk):
         pass
         
     def __len__(self):
-        pass
+        return len(self.bin_data)
         
 
 class EndBlock(POFChunk):
@@ -1821,16 +1860,23 @@ class EndBlock(POFChunk):
 class DefpointsBlock(POFChunk):
     CHUNK_ID = 1
     def read_chunk(self, bin_data):
+        #logging.debug("Found Defpoints")
         num_verts = unpack_int(bin_data.read(4))
+        #logging.debug("Number of verts {}".format(num_verts))
         num_norms = unpack_int(bin_data.read(4))
+        #logging.debug("Number of normals {}".format(num_norms))
         vert_data_offset = unpack_int(bin_data.read(4))
+        #logging.debug("Vert data offset {} bytes".format(vert_data_offset))
         
         norm_counts = list()
         
         for i in range(num_verts):
             norm_counts.append(unpack_byte(bin_data.read(1)))
             
+        #logging.debug("Norm counts \n{}".format(norm_counts))
+            
         if bin_data.tell() != vert_data_offset - 8:
+            logging.warning("DEFPOINTS:Current location does not equal vert data offset")
             bin_data.seek(vert_data_offset - 8)
             
         vert_list = list()
@@ -1841,6 +1887,9 @@ class DefpointsBlock(POFChunk):
             vert_norms.append(list())
             for j in range(norm_counts[i]):
                 vert_norms[i].append(unpack_vector(bin_data.read(12)))
+                
+        #logging.debug("Vert list \n{}".format(vert_list))
+        #logging.debug("Vert norms \n{}".format(vert_norms))
                 
         self.vert_list = vert_list
         self.vert_norms = vert_norms
@@ -1853,23 +1902,34 @@ class DefpointsBlock(POFChunk):
         else:
             return False
             
+        #logging.debug("Writing Defpoints")
+            
         vert_list = self.vert_list
         vert_norms = self.vert_norms
         num_verts = len(vert_list)
-        num_norms = sum(norm_counts)
+        num_norms = 0
         vert_data_offset = 20 + num_verts
+        
+        for v in vert_norms:
+            num_norms += len(v)
+            
+        #logging.debug("Number of verts {}".format(num_verts))
+        #logging.debug("Number of norms {}".format(num_norms))
+        #logging.debug("Vert data offset {}".format(vert_data_offset))
         
         chunk += pack_int(num_verts)
         chunk += pack_int(num_norms)
         chunk += pack_int(vert_data_offset)
         
         for v in vert_norms:
-            chunk += pack_int(len(v))
+            chunk += pack_byte(len(v))      # norm counts
             
         for i, v in enumerate(vert_norms):
-            chunk += pack_vector(vert_list[i])
+            chunk += pack_float(vert_list[i])
             for n in v:
-                chunk += pack_vector(n)
+                chunk += pack_float(n)
+                
+        return chunk
                 
     def get_mesh(self, m=False):
         if not m:
@@ -1890,10 +1950,9 @@ class DefpointsBlock(POFChunk):
     def __len__(self):
         chunk_length = 20
         try:
-            chunk_length += len(self.vert_list) * 13
             vert_norms = self.vert_norms
-            for i in vert_norms:
-                chunk_length += len(i)
+            for v in vert_norms:
+                chunk_length += 13 + 12 * len(v)
             return chunk_length
         except AttributeError:
             return 0
@@ -1929,8 +1988,8 @@ class FlatpolyBlock(POFChunk):
         vert_list = self.vert_list
         norm_list = self.norm_list
             
-        chunk += pack_vector(self.normal)
-        chunk += pack_vector(self.center)
+        chunk += pack_float(self.normal)
+        chunk += pack_float(self.center)
         chunk += pack_float(self.radius)
         chunk += pack_int(len(self.vert_list))
         chunk += pack_ubyte(self.color)
@@ -1988,23 +2047,24 @@ class TexpolyBlock(POFChunk):
         u = self.u
         v = self.v
             
-        chunk += pack_vector(self.normal)
-        chunk += pack_vector(self.center)
+        chunk += pack_float(self.normal)
+        chunk += pack_float(self.center)
         chunk += pack_float(self.radius)
         chunk += pack_int(len(self.vert_list))
+        chunk += pack_int(self.texture_id)
         
         for i, vert in enumerate(vert_list):
-            chunk += pack_short(vert)
-            chunk += pack_short(norm_list[i])
+            chunk += pack_ushort(vert)
+            chunk += pack_ushort(norm_list[i])
             chunk += pack_float(u[i])
             chunk += pack_float(v[i])
             
         return chunk
         
     def __len__(self):
-        chunk_length = 40
+        chunk_length = 44
         try:
-            chunk_length += 12 * len(vert_list)
+            chunk_length += 12 * len(self.vert_list)
             return chunk_length
         except AttributeError:
             return 0
@@ -2026,18 +2086,18 @@ class SortnormBlock(POFChunk):
         
     def write_chunk(self):
         chunk = pack_int(self.CHUNK_ID)
-        hunk += pack_int(80)
+        chunk += pack_int(80)
             
-        chunk += pack_vector(self.plane_normal)
-        chunk += pack_vector(self.plane_point)
+        chunk += pack_float(self.plane_normal)
+        chunk += pack_float(self.plane_point)
         chunk += b'\0\0\0\0'
         chunk += pack_int(self.front_offset)
         chunk += pack_int(self.back_offset)
         chunk += pack_int(self.prelist_offset)
         chunk += pack_int(self.postlist_offset)
         chunk += pack_int(self.online_offset)
-        chunk += pack_vector(self.min)
-        chunk += pack_vector(self.max)
+        chunk += pack_float(self.min)
+        chunk += pack_float(self.max)
         
         return chunk
         
@@ -2054,12 +2114,42 @@ class BoundboxBlock(POFChunk):
     def write_chunk(self):
         chunk = [pack_int(self.CHUNK_ID),
                       pack_int(32),
-                      pack_vector(self.min),
-                      pack_vector(self.min)]
+                      pack_float(self.min),
+                      pack_float(self.min)]
         return b"".join(chunk)
         
     def __len__(self):
         return 32
+        
+        
+chunk_dict = { # chunk or block id : chunk class
+              b"HDR2": HeaderChunk,
+              b"OHDR": HeaderChunk,
+              b"TXTR": TextureChunk,
+              b"PINF": MiscChunk,
+              b"PATH": PathChunk,
+              b"SPCL": SpecialChunk,
+              b"SHLD": ShieldChunk,
+              b" EYE": EyeChunk,
+              b"EYE ": EyeChunk,
+              b"GPNT": GunChunk,
+              b"MPNT": GunChunk,
+              b"TGUN": TurretChunk,
+              b"TMIS": TurretChunk,
+              b"DOCK": DockChunk,
+              b"FUEL": FuelChunk,
+              b"SOBJ": ModelChunk,
+              b"OBJ2": ModelChunk,
+              b"INSG": SquadChunk,
+              b"ACEN": CenterChunk,
+              b"GLOW": GlowChunk,
+              b"SLDC": TreeChunk,
+              0: EndBlock,
+              1: DefpointsBlock,
+              2: FlatpolyBlock,
+              3: TexpolyBlock,
+              4: SortnormBlock,
+              5: BoundboxBlock}
         
         
 ## Module methods ##
@@ -2068,11 +2158,14 @@ class BoundboxBlock(POFChunk):
 def read_pof(pof_file):
     """Takes a file-like object as a required argument, returns a list of chunks."""
     
+    logging.info("Reading POF file from {}".format(pof_file))
+    
     file_id = pof_file.read(4)
     if file_id != b'PSPO':
         raise FileFormatError(file_id, "Incorrect file ID for POF file")
         
     file_version = unpack_int(pof_file.read(4))
+    logging.debug("POF file version {}".format(file_version))
     if file_version > 2117:
         raise FileFormatError(file_version, "Expected POF version 2117 or lower, file version")
         
@@ -2080,16 +2173,21 @@ def read_pof(pof_file):
         
     while True:
         chunk_id = pof_file.read(4)
-        if chunk_id:
+        logging.debug("Found chunk {}".format(chunk_id))
+        if chunk_id != b"":
             chunk_length = unpack_int(pof_file.read(4))
+            logging.debug("Chunk length {}".format(chunk_length))
             try:
                 this_chunk = chunk_dict[chunk_id](file_version, chunk_id)
             except KeyError:        # skip over unknown chunk
+                logging.warning("Unknown chunk {}, skipping...".format(chunk_id))
                 pof_file.seek(chunk_length, 1)
+                continue
             chunk_data = RawData(pof_file.read(chunk_length))
             this_chunk.read_chunk(chunk_data)
             chunk_list.append(this_chunk)
         else:       # EOF
+            logging.info("End of file.")
             break
             
     return chunk_list
@@ -2100,13 +2198,13 @@ def write_pof(chunk_list, pof_version=2117):
     the POF version (duh).  If any chunk does not use the same version as used for the file, the file might not be
     valid and readable!"""
     
-    file_header = b"".join([b'PSPO', pack_int(pof_version)])
+    logging.info("Attempting to create POF file from chunk list...")
     
-    raw_chunks = b""
+    pof_file = b"".join([b'PSPO', pack_int(pof_version)])
     
     for chunk in chunk_list:
-        raw_chunks += chunk.write_chunk()
+        pof_file += chunk.write_chunk()
         
-    return b"".join([file_header, raw_chunks])
+    return pof_file
 
    

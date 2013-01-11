@@ -115,7 +115,7 @@ def unpack_int(bin_data):
         u = unpack('i', p)[0]
         
     elif len(p) > 4 and (len(p) % 4) == 0:
-        u = list(unpack('{}i'.format(len(p) / 4), p))
+        u = list(unpack('{}i'.format(len(p) // 4), p))
         
     return u
     
@@ -164,13 +164,15 @@ def unpack_vector(bin_data):
         p = bytes(bin_data)
     except TypeError:
         p = bytes(bin_data, "utf-8", "ignore")
+        
+    #print(len(p))
     
     if len(p) == 12:
         u = unpack('3f', p)
         
     elif len(p) > 12 and (len(p) % 12) == 0:
         u = list()
-        for i in range(len(p) / 12):
+        for i in range(len(p) // 12):
             u.append(unpack('3f', p[i * 12:i * 12 + 12]))
             
     return tuple(u)
@@ -309,16 +311,15 @@ class RawData:
     def __repr__(self):
         return "<RawData object of length {} at index {}>".format(len(self.data), self.addr)
         
-    def read(self, length = 0):
-        if length == 0:
+    def read(self, length=None):
+        if length is None:
             return self.data
+        elif length == 0:
+            return b""
         else:
-            try:
-                out = self.data[self.addr:self.addr + length]
-                self.addr += length
-                return out
-            except IndexError:
-                return False
+            out = self.data[self.addr:self.addr + length]
+            self.addr += length
+            return out
             
     def seek(self, new_addr, whence = 0):
         if whence == 1:
