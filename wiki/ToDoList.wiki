@@ -3,7 +3,7 @@
 
 ==Immediate to-do list ~Kopachris==
  * ~~Shield collision tree chunk~~
-  * _generate_tree_recursion()
+  * `_generate_tree_recursion()`
  * get_mesh() and set_mesh() for model chunk
  * verify_pof()
 
