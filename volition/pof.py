@@ -1831,18 +1831,94 @@ class GlowChunk(POFChunk):
 class TreeChunk(POFChunk):
     CHUNK_ID = b"SLDC"
     def read_chunk(self, bin_data):
-        logging.debug("Not actually reading shield collision tree, but found it...")
-        self.bin_data = bin_data.read()
+        tree_size = unpack_uint(bin_data.read(4))
+        shield_tree = list()
+        
+        while True:
+            node_type = unpack_ubyte(bin_data.read(1))
+            eof_test = bin_data.read(4)
+            if eof_test == b"":
+                break
+            if node_type:
+                this_node = ShieldLeaf()
+                this_node.min = unpack_vector(bin_data.read(12))
+                this_node.max = unpack_vector(bin_data.read(12))
+                this_node.front = unpack_uint(bin_data.read(4))
+                this_node.back = unpack_uint(bin_data.read(4))
+            else:
+                this_node = ShieldSplit()
+                this_node.min = unpack_vector(bin_data.read(12))
+                this_node.max = unpack_vector(bin_data.read(12))
+                num_polygons = unpack_uint(bin_data.read(4))
+                face_list = list()
+                for i in range(num_polygons):
+                    face_list.append(unpack_uint(bin_data.read(4)))
+                this_node.face_list = face_list
+            shield_tree.append(this_node)
+            self.shield_tree = shield_tree
         
     def write_chunk(self):
+        chunk = self.CHUNK_ID
+        length = len(self)
+        if length:
+            chunk += pack_int(length)
+        else:
+            return False
         logging.debug("Writing shield collision tree with size {}...".format(len(self)))
-        return b"".join([self.CHUNK_ID, pack_int(len(self)), self.bin_data])
+        chunk += pack_uint(length - 4)
+        
+        shield_tree = self.shield_tree
+        
+        for node in shield_tree:
+            chunk += pack_ubyte(node.node_type)
+            chunk += pack_uint(len(node))
+            
+            if node.node_type:
+                chunk += pack_float(node.min)
+                chunk += pack_float(node.max)
+                
+                face_list = node.face_list
+                num_polygons = len(face_list)
+                chunk += pack_uint(num_polygons)
+                
+                for f in face_list:
+                    chunk += pack_uint(f)
+                
+        return chunk
         
     def make_shield_collision_tree(self, shield_chunk):
         pass
         
     def __len__(self):
-        return len(self.bin_data)
+        chunk_length = 4
+        try:
+            shield_tree = self.shield_tree
+            for node in shield_tree:
+                chunk_length += len(node)
+            return chunk_length
+        except AttributeError:
+            return 0
+        
+        
+class ShieldSplit:
+    node_type = 0
+    min = None
+    max = None
+    front_offset = None
+    back_offset = None
+    
+    def __len__(self):
+        return 32
+    
+    
+class ShieldLeaf:
+    node_type = 1
+    min = None
+    max = None
+    face_list = list()
+    
+    def __len__(self):
+        return 28 + 4 * len(self.face_list)
         
 
 class EndBlock(POFChunk):
