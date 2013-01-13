@@ -36,7 +36,7 @@
     * ~~Insignia~~
     * ~~Autocentering~~
     * ~~Glow points~~
-    * Shield mesh collision tree
+    * ~~Shield mesh collision tree~~
     * ~~BSP data blocks~~
 
 ==Goals for the far distant future==
