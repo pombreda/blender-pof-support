@@ -4,7 +4,7 @@
 ==Immediate to-do list ~Kopachris==
  * Add a few things to geometry classes:
   * UV texturing/flat shading to Faces
-  * Vertex normals to Faces
+  * Vertex normals to Faces (and sharp values for Edges)
   * Calculate edges from set of Faces so we can make the face list on our own and use it to instantiate the Mesh.
   * Update ModelChunk.get_mesh() to use these features
  * set_mesh() and generate_tree_recursion() for model chunk
