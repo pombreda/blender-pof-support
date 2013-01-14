@@ -29,13 +29,11 @@
 # Mesh
     # calculate edge_list from face_list
     # calculate vert_list from edge_list
-    # calculate seams from vert norms
 ## Chunks
 # SubmodelChunk
     # get_mesh()
     # set_mesh(mesh)
     # make_bsp_tree()
-# ShieldCollisionChunk
 ## POF and BSP functions
 # validate_pof()
 # make_defpoints()
@@ -48,7 +46,7 @@ from .bintools import *
 from . import VolitionError, FileFormatError
 import logging
 
-logging.basicConfig(filename="pof.log", level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 
 
 ## Exceptions ##
@@ -218,7 +216,7 @@ class Mesh:
 
         edges = self.edge_list
         for i, e in enumerate(edges):
-            edge_list[i].append(e.seam)
+            edge_list[i].append(e.sharp)
 
         return edge_list
 
@@ -303,9 +301,51 @@ class Mesh:
             self._vfi = False
             self._vei = False
 
+    def calculate_sharp_edges(self):
+        fei = self._fei
+        fvi = self._fvi
+
+        evi = self._evi
+        efi = self._efi
+
+        vfi = self._vfi
+        vei = self._vei
+
+        if not fei or not fvi or not evi or not efi or not vfi or not vei:
+            try:
+                self._make_index()
+            except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
+                raise GeometryError(None, "Incomplete geometry - can't make index.")
+
+        # We're calculating edge sharpness by checking vertex norms
+        # against the face norm. Sharp is True by default, but
+        # if any vert norm is off from the face norm, it's False
+
+        face_list = self.face_list
+        edge_list = self.edge_list
+        vert_list = self.vert_list
+        for i, e in enumerate(edge_list):
+            sharp = True
+            verts = evi[i]
+            for f in efi[i]:
+                for v in face_list[f].vert_list:
+                    if v.index in verts:
+                        this_normal = vert_list[v.index].normals[v.normal]
+                        face_normal = face_list[f].normal
+                        for t, f in zip(this_normal, face_normal):
+                            if not (f - 0.1) < t < (f + 0.1):
+                                sharp = False
+                                break
+                    if not sharp:
+                        break   # for vert in face
+                if not sharp:
+                    break       # for face in edge
+            e.sharp = sharp
+        self.edge_list = edge_list
+
     def calculate_normals(self):
 
-        # This should be called during export, where we have seam values
+        # This should be called during export, where we have sharp values
         # This should not be called during import, where we already have vertex normals
 
         fei = self._fei        # face edge index
@@ -337,7 +377,7 @@ class Mesh:
             this_vert_norms = set()
 
             for e in el:
-                if edges[e].seam:
+                if edges[e].sharp:
                     for f in efi[e]:
                         smooth_norm_x += faces[f].normal[0]
                         smooth_norm_y += faces[f].normal[1]
@@ -356,15 +396,17 @@ class Mesh:
             verts[v].normals = list(this_vert_norms)
 
         # assign vert norm index to faces
+        # if you can figure out how to do this without
+        # so many nested loops, feel free to implement it
 
         for v, fl in vfi:
             for f in fl:
                 cur_vert_idx = fvi[f].index(v)
                 for e in fei[f]:
-                    if edges[e].seam:
-                        faces[f].vert_norms[cur_vert_idx] = verts[v].normals.index(faces[f].normal)
+                    if edges[e].sharp:
+                        faces[f].vert_list[cur_vert_idx].normal = verts[v].normals.index(faces[f].normal)
                     else:
-                        faces[f].vert_norms[cur_vert_idx] = len(verts[v].normals) - 1
+                        faces[f].vert_list[cur_vert_idx].normal = len(verts[v].normals) - 1
 
         self.vert_list = verts
         self.face_list = faces
@@ -448,13 +490,21 @@ class Vertex:
         return str(self.co)
 
 
+class FaceVert(Vertex):
+    def __init__(self, co):
+        self.co = co
+        self.index = None
+        self.normal = None
+        self.uv = None
+
+
 class Edge:
-    def __init__(self, verts, seam = True):
+    def __init__(self, verts, sharp = True):
         if not isinstance(verts[0], Vertex) or not isinstance(verts[1], Vertex) or len(verts) != 2:
             raise VertListError(verts, "Vertex list for Edge object instantiation must be sequence of two Vertex objects.")
         else:
             self.verts = frozenset(verts)
-            self.seam = seam
+            self.sharp = sharp
             self.length = sqrt((verts[1].co[0] - verts[0].co[0]) ** 2 + (verts[1].co[1] - verts[0].co[1]) ** 2 + (verts[1].co[2] - verts[0].co[2]) ** 2)
 
     def __eq__(self, other):
@@ -474,28 +524,28 @@ class Edge:
 
 
 class Face:
-    def __init__(self, edge_list, uv=False):
-        try:
-            prev_edge_verts = edge_list[len(edge_list) - 1].verts
-        except (AttributeError, ValueError, IndexError, TypeError):
-            raise FaceListError(edge_list, "Face must be instantiated from a sequence of Edge objects.")
-
-        if uv:
-            self.uv = uv
-
-        # uv should be a list, indexed into vert_list (created later), of size 2 lists, so that:
-        # uv[i][0] is the u coord of list(vert_list)[i]
-        # uv[i][1] is the v coord of list(vert_list)[i]
-        # etc.
-
+    def __init__(self, edge_list, vert_idx=False, color=False, textured=False, uv=False, vert_norms=False):
+        vert_list = list()
+        # add FaceVert objects to Face
         for e in edge_list:
-            if not isinstance(e, Edge):
-                raise FaceListError(edge_list, "Face must be instantiated from a sequence of Edge objects.")
-            this_edge_verts = e.verts
-            if this_edge_verts[0] not in prev_edge_verts or this_edge_verts[1] not in prev_edge_verts:
-                raise FaceListError(edge_list, "Edges must be connected to make face.")
-            prev_edge_verts = this_edge_verts
-        ## TO DO: Re-write edge check, include stipulation that only two edges can use a vertex
+            for v in e.verts:
+                vert_list.append(FaceVert(v.co))
+        if len(vert_list) != 3:
+            raise GeometryError(None, "This module only accepts triangular faces.")
+        vert_list = set(vert_list)
+        for i, v in enumerate(vert_list):
+            # v.index is the index of the vert in some vert list
+            # v.uv are the vert's uv coords
+            # v.normal is the index of the vert's normal in some_vert_list[v.index].normals
+            if vert_idx:
+                v.index = vert_idx[i]
+            if uv:
+                v.uv = uv[i]
+            if vert_norms:
+                v.normal = vert_norms[i]
+        self.textured = textured    # bool, whether the face is textured
+        self.color = color          # (r, g, b) if textured is False
+                                    # texture ID if textured is True
 
         # Everything OK, can assign the edge list now
         self.edges = frozenset(edge_list)
@@ -539,8 +589,6 @@ class Face:
         for i in range(num_verts):
             c_dist.append(sqrt((self.center[0] - verts_x[i]) ** 2 + (self.center[1] - verts_y[i]) ** 2 + (self.center[2] - verts_z[i]) ** 2))
         self.radius = max(c_dist)
-
-        self.vert_norms = [0, 0, 0]     # indexed into Mesh.fvi
 
     def __eq__(self, other):
         if self.edges == other.edges:
@@ -1560,7 +1608,25 @@ class ModelChunk(POFChunk):
         return chunk
 
     def get_mesh(self):
-        pass
+        """Returns a mesh object."""
+        bsp_tree = self.bsp_tree
+        face_list = list()
+
+        for node in bsp_tree:
+            if node.CHUNK_ID == 1:
+                # get vert list from defpoints
+                # should only happen once per model
+                vert_list = node.vert_list
+                vert_norms = node.vert_norms
+            elif node.CHUNK_ID == 2 or node.CHUNK_ID == 3:
+                face_list.append(node.vert_list)
+
+        m = Mesh()
+        m.set_vert_list(vert_list, vert_norms)
+        m.set_face_list(face_list)
+        m.calculate_sharp_edges()
+
+        return m
 
     def set_mesh(self, m):
         # Basically:
@@ -1864,7 +1930,7 @@ class TreeChunk(POFChunk):
             chunk += pack_int(length)
         else:
             return False
-        logging.debug("Writing shield collision tree with size {}...".format(len(self)))
+        logging.debug("Writing shield collision tree with size {}...".format(length))
         chunk += pack_uint(length - 4)
 
         shield_tree = self.shield_tree
@@ -1887,6 +1953,7 @@ class TreeChunk(POFChunk):
         return chunk
 
     def make_shield_collision_tree(self, shield_chunk):
+        """Should be called if any geometry on the shield is modified."""
         vert_list = frozenset(shield_chunk.vert_list)
         face_list = shield_chunk.face_list
         self.vert_list = vert_list
@@ -1904,7 +1971,6 @@ class TreeChunk(POFChunk):
         return self.shield_tree
 
     def _generate_tree_recursion(self, vert_list, face_list):
-        shield_tree = self.shield_tree
         verts_x = list()
         verts_y = list()
         verts_z = list()
@@ -1924,7 +1990,7 @@ class TreeChunk(POFChunk):
         max_pnt = vector(max_x, max_y, max_z)
         min_pnt = vector(min_x, min_y, min_z)
 
-        if len(face_list) < 3:
+        if len(face_list) < 3:      # rather arbitrary stopping point
             cur_node = ShieldLeaf()
             cur_node.max = max_pnt
             cur_node.min = min_pnt
@@ -1933,10 +1999,13 @@ class TreeChunk(POFChunk):
             for f in face_list:
                 node_faces.append(shield_faces.index(f))
             cur_node.face_list = node_faces
-            shield_tree.append(cur_node)
-            self.shield_tree = shield_tree
+            self.shield_tree.append(cur_node)
             return None
 
+        # Get longest axis and split
+        # PCS2's bspgen functions try to keep a similar number of faces in
+        # each split, moving the split point a few times until it gets that.
+        # We might implement that later
         d_x = max_x - min_x
         d_y = max_y - min_y
         d_z = max_z - min_z
@@ -1968,6 +2037,8 @@ class TreeChunk(POFChunk):
         front_verts = set()
         back_verts = set()
 
+        # get all verts in front of split, put them in front_verts
+        # all verts behind split go in back_verts
         for v in vert_list:
             if v[0] >= bb_min_x and v[1] >= bb_min_y and v[2] >= bb_min_z:
                 front_verts.add(v)
@@ -1978,15 +2049,27 @@ class TreeChunk(POFChunk):
             face_verts = set()
             for v in f:
                 face_verts.add(shield_verts[v])
-            if face_verts < front_verts:
+            if face_verts < front_verts:        # lovely python sets
+                # if ALL the verts in face are in front_verts,
+                # face goes in front_faces, else back_faces
                 front_faces.append(f)
             else:
                 for v in f:
+                    # check if any verts in face aren't in back_verts
+                    # and add them, if necessary
                     back_verts.add(shield_verts[v])
                 back_faces.append(f)
 
-        # I'll comment ^this section later...
-        # ...or never...
+        self.shield_tree.append(cur_node)
+        cur_idx = len(shield_tree)
+        self._generate_tree_recursion(front_verts, front_faces)
+        back_offset = 37    # len of this split node
+        shield_tree = self.shield_tree
+        # get len of all nodes added by the recursion:
+        for node in shield_tree[cur_idx:]:
+            back_offset += len(node)
+        cur_node.back_offset = back_offset      # lovely python all-variables-are-references
+        self._generate_tree_recursion(back_verts, back_faces)
 
     def __len__(self):
         chunk_length = 4
@@ -2003,11 +2086,11 @@ class ShieldSplit:
     node_type = 0
     min = None
     max = None
-    front_offset = None
+    front_offset = 37
     back_offset = None
 
     def __len__(self):
-        return 32
+        return 37
 
 
 class ShieldLeaf:
@@ -2017,7 +2100,7 @@ class ShieldLeaf:
     face_list = list()
 
     def __len__(self):
-        return 28 + 4 * len(self.face_list)
+        return 33 + 4 * len(self.face_list)
 
 
 class EndBlock(POFChunk):
@@ -2149,8 +2232,8 @@ class FlatpolyBlock(POFChunk):
             vert_list.append(unpack_short(bin_data.read(2)))
             norm_list.append(unpack_short(bin_data.read(2)))
 
-        self.vert_list = vert_list
-        self.norm_list = norm_list
+        self.vert_list = vert_list      # indexed into DefpointsBlock.vert_list
+        self.norm_list = norm_list      # indexed into DefpointsBlock.vert_norms[i]
 
     def write_chunk(self):
         chunk = pack_int(self.CHUNK_ID)
