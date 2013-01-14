@@ -217,3 +217,6 @@ def unregister():
 }}}
 
 The external `volition` package needs to be placed in [Blender dir]/2.65/scripts/modules.
+
+==Mesh editing==
+Since most geometry modification will be done in Blender, being able to accurately modify our Mesh objects isn't imperative right now.  In the future, though, an `update_mesh()` method would be appropriate to ensure that each edge's and face's vertex lists match vertices in the mesh's vertex list.
