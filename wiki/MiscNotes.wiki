@@ -2,9 +2,11 @@
 #labels Phase-QA,Featured
 
 ==Testing the importer and exporter==
-In the early stages, we can test the BSP tree generator by importing an existing POF file and exporting just a single submodel from it, then opening the resultant POF file in PCS or ModelView32.
+~~In the early stages, we can test the BSP tree generator by importing an existing POF file and exporting just a single submodel from it, then opening the resultant POF file in PCS or ModelView32.~~
 
-Additional tests should include making sure calculated stuff equals actual values.  For example, `HeaderChunk.length` should ideally equal the length of the data passed when instantiating the class when reading from a POF file.
+~~Additional tests should include making sure calculated stuff equals actual values.  For example, `HeaderChunk.length` should ideally equal the length of the data passed when instantiating the class when reading from a POF file.~~
+
+The main test of the POF module will be to make sure all chunks can be imported and then exported, and the resulting POF file will be essentially the same as the original.  This includes importing ShieldChunks and ModelChunks to Mesh objects and then recreating the shield collision tree and model BSP trees from the imported mesh data.
 
 ==Vertex normals==
 Calculating vertex normals can only be done with an edge object with the boolean attribute `seam` or something similar to mark smoothgroups.  Something like:
