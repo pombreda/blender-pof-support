@@ -11,29 +11,40 @@ ClassName=TProjectFilesNode
 
 [Project\ChildNodes\Node0\ChildNodes\Node0]
 ClassName=TProjectFolderNode
-Name=volition
+Name=io-scene-pof
 
 [Project\ChildNodes\Node0\ChildNodes\Node0\ChildNodes\Node0]
 ClassName=TProjectFileNode
+FileName=$[Project-Path]io-scene-pof\__init__.py
+
+[Project\ChildNodes\Node0\ChildNodes\Node0\ChildNodes]
+Count=1
+
+[Project\ChildNodes\Node0\ChildNodes\Node1]
+ClassName=TProjectFolderNode
+Name=volition
+
+[Project\ChildNodes\Node0\ChildNodes\Node1\ChildNodes\Node0]
+ClassName=TProjectFileNode
 FileName=$[Project-Path]volition\__init__.py
 
-[Project\ChildNodes\Node0\ChildNodes\Node0\ChildNodes\Node1]
+[Project\ChildNodes\Node0\ChildNodes\Node1\ChildNodes\Node1]
 ClassName=TProjectFileNode
 FileName=$[Project-Path]volition\bintools.py
 
-[Project\ChildNodes\Node0\ChildNodes\Node0\ChildNodes\Node2]
+[Project\ChildNodes\Node0\ChildNodes\Node1\ChildNodes\Node2]
 ClassName=TProjectFileNode
 FileName=$[Project-Path]volition\pof.py
 
-[Project\ChildNodes\Node0\ChildNodes\Node0\ChildNodes\Node3]
+[Project\ChildNodes\Node0\ChildNodes\Node1\ChildNodes\Node3]
 ClassName=TProjectFileNode
 FileName=$[Project-Path]volition\vp.py
 
-[Project\ChildNodes\Node0\ChildNodes\Node0\ChildNodes]
+[Project\ChildNodes\Node0\ChildNodes\Node1\ChildNodes]
 Count=4
 
 [Project\ChildNodes\Node0\ChildNodes]
-Count=1
+Count=2
 
 [Project\ChildNodes\Node1]
 ClassName=TProjectRunConfiguationsNode
