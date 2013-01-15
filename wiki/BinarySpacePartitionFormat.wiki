@@ -104,21 +104,21 @@ The point of a BSP tree is to speed up rendering by splitting a model recursivel
 We stop splitting when we reach a level where at least one leaf node will have only one polygon.  We can calculate how many children this will take.
 
 ====In more detail====
- # ~~Split your vertex coordinates list into verts_x, verts_y, and verts_z
- # Determine minimum and maximum coordinates for this node
- # If the length of the face list is less than three:
-  * Create a bounding box for each face
-  * If we're doing a BSP tree, add a boundbox node and the polygon node for each face
-  * If we're doing an SLDC chunk, add a leaf node with the face data
-  * Return
- # Create a sortnorm for this node (a "split node" for the SLDC chunk)
- # Determine the longest axis of this vertex list, and create a coordinate to split this axis exactly in half
-  * Determine all the faces which use only vertices in front of that point--these are your new front list
-  * All other faces are your back list for this node
- # Recurse into the front list
- # Upon return from the recursion, determine the size of all nodes added by the recursion
-  * This is the back offset, add it to the current node
- # Recurse into the back list~~
+ # ~~Split your vertex coordinates list into verts_x, verts_y, and verts_z~~
+ # ~~Determine minimum and maximum coordinates for this node
+ # ~~If the length of the face list is less than three:
+  * ~~Create a bounding box for each face
+  * ~~If we're doing a BSP tree, add a boundbox node and the polygon node for each face
+  * ~~If we're doing an SLDC chunk, add a leaf node with the face data
+  * ~~Return
+ # ~~Create a sortnorm for this node (a "split node" for the SLDC chunk)
+ # ~~Determine the longest axis of this vertex list, and create a coordinate to split this axis exactly in half
+  * ~~Determine all the faces which use only vertices in front of that point--these are your new front list
+  * ~~All other faces are your back list for this node
+ # ~~Recurse into the front list
+ # ~~Upon return from the recursion, determine the size of all nodes added by the recursion
+  * ~~This is the back offset, add it to the current node
+ # ~~Recurse into the back list~~
 
 ====How PCS2 does it====
  # A bounding box and pointer to the list of polygons is passed to GenerateTreeRecursion()
