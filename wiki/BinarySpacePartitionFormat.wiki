@@ -94,7 +94,7 @@ The point of a BSP tree is to speed up rendering by splitting a model recursivel
  * The end of the entire BSP tree is designated by two End-of-Tree blocks following a polygon block.
 
 ===About the sortnorm block===
-For one split of the model, two `sortnorm`s are needed.  They may share the same `plane_point`, but must have opposite `plane_normal`s.  The `front_offset` is the byte offset from the beginning of the block to the `sortnorm` of the first child node, and the `back_offset` is the byte offset from the beginning of the block to the `sortnorm` of this node's sibling.  The `prelist_offset`, `postlist_offset`, and `online_offset` should always point to an End-of-Tree block.  (Could we point them to just any EOT block?)
+~~For one split of the model, two `sortnorm`s are needed.  They may share the same `plane_point`, but must have opposite `plane_normal`s.~~  The `front_offset` is the byte offset from the beginning of the block to the `sortnorm` of the first child node, and the `back_offset` is the byte offset from the beginning of the block to the `sortnorm` of this node's sibling.  The `prelist_offset`, `postlist_offset`, and `online_offset` should always point to an End-of-Tree block.  (Could we point them to just any EOT block?)
 
 ===Determining the front and back polylists===
  # Determine points ahead of and behind the plane
@@ -104,7 +104,7 @@ For one split of the model, two `sortnorm`s are needed.  They may share the same
 We stop splitting when we reach a level where at least one leaf node will have only one polygon.  We can calculate how many children this will take.
 
 ====In more detail====
- # Split your vertex coordinates list into verts_x, verts_y, and verts_z
+ # ~~Split your vertex coordinates list into verts_x, verts_y, and verts_z
  # Determine minimum and maximum coordinates for this node
  # If the length of the face list is less than three:
   * Create a bounding box for each face
@@ -118,7 +118,7 @@ We stop splitting when we reach a level where at least one leaf node will have o
  # Recurse into the front list
  # Upon return from the recursion, determine the size of all nodes added by the recursion
   * This is the back offset, add it to the current node
- # Recurse into the back list
+ # Recurse into the back list~~
 
 ====How PCS2 does it====
  # A bounding box and pointer to the list of polygons is passed to GenerateTreeRecursion()
@@ -127,7 +127,12 @@ We stop splitting when we reach a level where at least one leaf node will have o
   * If only one, make a polygon node and return
   * Otherwise make a sortnorm node with the passed bounds
  # Calling Bisect() splits the bounds into front bounds and back bounds
- # (GTR actually calls Bisect() and checks contained polygons several times, until it gets the number of polygons in each list roughly equal)
+  * GTR actually calls Bisect() and checks contained polygons several times, until it gets the number of polygons in each list roughly equal
+  * Calling Bisect() also sets the plane point to the geometric center of the bounding box
  # Call GTR with front bounds, "contained"
  # Call GTR with back bounds, "contained"
  # Expand bounding box to accommodate children (necessary because of added padding throughout the process, usually around 0.1 units on all axes)
+
+Notes: When checking for contained polygons, PCS2 uses the center of the polygon, rather than the polygon's bounds.  When making bounding boxes, however, it uses the polygon's physical bounds.
+
+What we can infer from this: A sortnorm is a bounding box around both the front list _and_ the back list.  The splitting plane (given by a center point and a normal vector) gives the direction of "front."
