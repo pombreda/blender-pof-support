@@ -119,3 +119,15 @@ We stop splitting when we reach a level where at least one leaf node will have o
  # Upon return from the recursion, determine the size of all nodes added by the recursion
   * This is the back offset, add it to the current node
  # Recurse into the back list
+
+====How PCS2 does it====
+ # A bounding box and pointer to the list of polygons is passed to GenerateTreeRecursion()
+ # GTR checks for infinite recursion
+ # Find all polygons contained by passed bounds (store in "contained")
+  * If only one, make a polygon node and return
+  * Otherwise make a sortnorm node with the passed bounds
+ # Calling Bisect() splits the bounds into front bounds and back bounds
+ # (GTR actually calls Bisect() and checks contained polygons several times, until it gets the number of polygons in each list roughly equal)
+ # Call GTR with front bounds, "contained"
+ # Call GTR with back bounds, "contained"
+ # Expand bounding box to accommodate children (necessary because of added padding throughout the process, usually around 0.1 units on all axes)
