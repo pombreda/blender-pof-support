@@ -15,7 +15,7 @@
     * Mesh
      * ~~Vertex normals calculation~~
      * ~~Vertex normal indexing~~
-     * Calculate seams
+     * ~~Calculate seams~~
      * Calculate edge_list from face_list
      * Calculate vert_list from edge_list
    * Classes for each chunk
