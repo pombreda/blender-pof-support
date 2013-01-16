@@ -103,23 +103,6 @@ The point of a BSP tree is to speed up rendering by splitting a model recursivel
  # Determine bounding boxes for each
 We stop splitting when we reach a level where at least one leaf node will have only one polygon.  We can calculate how many children this will take.
 
-====In more detail====
- # ~~Split your vertex coordinates list into verts_x, verts_y, and verts_z~~
- # ~~Determine minimum and maximum coordinates for this node~~
- # ~~If the length of the face list is less than three:~~
-  * ~~Create a bounding box for each face~~
-  * ~~If we're doing a BSP tree, add a boundbox node and the polygon node for each face~~
-  * ~~If we're doing an SLDC chunk, add a leaf node with the face data~~
-  * ~~Return~~
- # ~~Create a sortnorm for this node (a "split node" for the SLDC chunk)~~
- # ~~Determine the longest axis of this vertex list, and create a coordinate to split this axis exactly in half~~
-  * ~~Determine all the faces which use only vertices in front of that point--these are your new front list~~
-  * ~~All other faces are your back list for this node~~
- # ~~Recurse into the front list~~
- # ~~Upon return from the recursion, determine the size of all nodes added by the recursion~~
-  * ~~This is the back offset, add it to the current node~~
- # ~~Recurse into the back list~~
-
 ====How PCS2 does it====
  # A bounding box and pointer to the list of polygons is passed to GenerateTreeRecursion()
  # GTR checks for infinite recursion
@@ -135,4 +118,23 @@ We stop splitting when we reach a level where at least one leaf node will have o
 
 Notes: When checking for contained polygons, PCS2 uses the center of the polygon, rather than the polygon's bounds.  When making bounding boxes, however, it uses the polygon's physical bounds.
 
-What we can infer from this: A sortnorm is a bounding box around both the front list _and_ the back list.  The splitting plane (given by a center point and a normal vector) gives the direction of "front."
+What we can infer from this: A sortnorm is a bounding box around both the front list _and_ the back list.  The splitting plane (given by a center point (the center point of the entire bounding box) and a normal vector) gives the direction of "front."
+
+====Our implementation====
+ # Start by generating the defpoints block and blocks for the polygon list
+ # Pass the initial vert list and polygon list to generate_tree_recursion()
+  * If length of the polylist is less than three, then for each polygon:
+   # Create a bounding box block for the polygon, add it to the BSP tree
+   # Add the polygon block to the BSP tree
+   # Add an EOT block to the BSP tree
+  * Return
+ # GTR splits the vert list into separate lists for x, y, and z coordinates
+ # Get the min, max, and center coordinates
+ # Get the longest axis and the split normal
+ # Determine front and back vert lists
+ # Determine front and back polygons
+ # Add any front verts used by back polygons to back vert list
+ # Call GTR on front lists
+ # Get size of added nodes, set as back_offset
+ # Call GTR on back lists
+ # Return
