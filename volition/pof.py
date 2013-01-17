@@ -1731,6 +1731,7 @@ class ModelChunk(POFChunk):
         self._faces_added = 0
         self._generate_tree_recursion(vert_list, face_list)
         self.bsp_tree.insert(0, self._defpoints)
+        self.bsp_tree.append(EndBlock())
 
     def _add_faces(self, face_list):
         bsp_tree = self.bsp_tree
@@ -1943,6 +1944,9 @@ class ModelChunk(POFChunk):
         num_fbpolys = num_fpolys + num_bpolys
         cur_idx = len(bsp_tree)
         bsp_tree.append(cur_node)
+        for i in range(3):
+            cur_node = EndBlock()
+            bsp_tree.append(cur_node)
         self.bsp_tree = bsp_tree
         self._generate_tree_recursion(f_verts, f_polys)
 
