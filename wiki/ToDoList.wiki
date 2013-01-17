@@ -3,9 +3,9 @@
 
 ==Immediate to-do list ~Kopachris==
  * ~~Update ModelChunk.get_mesh() to make its own face list~~
- * Update SLDC recursion functions to match ModelChunk recursion functions
  * ~~set_mesh() and generate_tree_recursion() for model chunk~~ _Analyze PCS2's BSP functions.  Again._
  * verify_pof()
+ * Update SLDC recursion functions to match ModelChunk recursion functions
 
 ==Global to-do list==
  * Finish writing volition module
