@@ -46,8 +46,6 @@ from .bintools import *
 from . import VolitionError, FileFormatError
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
-
 
 ## Exceptions ##
 
@@ -125,14 +123,14 @@ class FaceListError(GeometryError):
 ## Helper types ##
 
 
-def vector(x = False, y = False, z = False):
+def vector(x = None, y = None, z = None):
     """A sequence of floats.  Returns a tuple.
 
     Attributes:
         x=0 -- float -- x-axis point
         y=0 -- float -- y-axis point
         z=0 -- float -- z-axis point"""
-    if not x or not y or not z:
+    if x is None or y is None or z is None:
         return False
     else:
         return (float(x), float(y), float(z))
@@ -312,10 +310,12 @@ class Mesh:
         vei = self._vei
 
         if not fei or not fvi or not evi or not efi or not vfi or not vei:
-            try:
-                self._make_index()
-            except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
-                raise GeometryError(None, "Incomplete geometry - can't make index.")
+            #try:
+                #self._make_index()
+            #except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
+                #raise GeometryError(None, "Incomplete geometry - can't make index.")
+
+            self._make_index()
 
         # We're calculating edge sharpness by checking vertex norms
         # against the face norm. Sharp is True by default, but
@@ -358,10 +358,11 @@ class Mesh:
         vei = self._vei        # vert edge index
 
         if not fei or not fvi or not evi or not efi or not vfi or not vei:
-            try:
-                self._make_index()
-            except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
-                raise GeometryError(None, "Incomplete geometry - can't make index.")
+            #try:
+                #self._make_index()
+            #except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
+                #raise GeometryError(None, "Incomplete geometry - can't make index.")
+            self._make_index()
 
         faces = self.face_list
         edges = self.edge_list
@@ -422,21 +423,22 @@ class Mesh:
         vfi = dict()        # vert face index
         vei = dict()        # vert edge index
 
-        faces = self.face_list
-        edges = self.edge_list
-        verts = self.vert_list
+        faces = list(self.face_list)
+        edges = list(self.edge_list)
+        verts = list(self.vert_list)
 
         for i, f in enumerate(faces):
             fe = set()     # list of indices
             fv = set()      # set of indices
             for e in f.edges:
                 fe.add(edges.index(e))
-                fv.add(verts.index(e.verts[0]), verts.index(e.verts[1]))
+                fv.add(verts.index(e.verts[0]))
+                fv.add(verts.index(e.verts[1]))
             fei[i] = fe
             fvi[i] = fv
 
         for i, e in enumerate(edges):
-            evi[i] = set(verts.index(e.verts[0]), verts.index(e.verts[1]))
+            evi[i] = set({verts.index(e.verts[0]), verts.index(e.verts[1])})
             ef = set()
             for j, k in fei:
                 if i in k:
@@ -470,7 +472,7 @@ class Vertex:
         co (vector) -- The 3D coordinates of the vertex
         norms (sequence of vectors) -- The normals of the vertex"""
     def __init__(self, loc, norms = False):
-        self.co = vector(loc)
+        self.co = tuple(loc)
         if norms:
             self.normals = list(norms)
 
@@ -503,7 +505,7 @@ class Edge:
         if not isinstance(verts[0], Vertex) or not isinstance(verts[1], Vertex) or len(verts) != 2:
             raise VertListError(verts, "Vertex list for Edge object instantiation must be sequence of two Vertex objects.")
         else:
-            self.verts = frozenset(verts)
+            self.verts = verts
             self.sharp = sharp
             self.length = sqrt((verts[1].co[0] - verts[0].co[0]) ** 2 + (verts[1].co[1] - verts[0].co[1]) ** 2 + (verts[1].co[2] - verts[0].co[2]) ** 2)
 
@@ -525,14 +527,13 @@ class Edge:
 
 class Face:
     def __init__(self, edge_list, vert_idx=False, color=False, textured=False, uv=False, vert_norms=False):
-        vert_list = list()
+        vert_list = set()
         # add FaceVert objects to Face
         for e in edge_list:
             for v in e.verts:
-                vert_list.append(FaceVert(v.co))
+                vert_list.add(FaceVert(v.co))
         if len(vert_list) != 3:
-            raise GeometryError(None, "This module only accepts triangular faces.")
-        vert_list = set(vert_list)
+            raise GeometryError(vert_list, "This module only accepts triangular faces.")
         for i, v in enumerate(vert_list):
             # v.index is the index of the vert in some vert list
             # v.uv are the vert's uv coords
@@ -551,21 +552,29 @@ class Face:
         self.edges = frozenset(edge_list)
 
         # Calculate, in order, centroid, normal, and radius
+##        verts_x = list()
+##        verts_y = list()
+##        verts_z = list()
+##        vert_list = set()
+##        for e in edge_list:
+##            if e.verts[0] not in vert_list:
+##                vert_list.add(e.verts[0])
+##                verts_x.append(e.verts[0].co[0])
+##                verts_y.append(e.verts[0].co[1])
+##                verts_z.append(e.verts[0].co[2])
+##            if e.verts[1] not in vert_list:
+##                vert_list.add(e.verts[1])
+##                verts_x.append(e.verts[1].co[0])
+##                verts_y.append(e.verts[1].co[1])
+##                verts_z.append(e.verts[1].co[2])
+
         verts_x = list()
         verts_y = list()
         verts_z = list()
-        vert_list = set()
-        for e in edge_list:
-            if e.verts[0] not in vert_list:
-                vert_list.add(e.verts[0])
-                verts_x.append(e.verts[0].co[0])
-                verts_y.append(e.verts[0].co[1])
-                verts_z.append(e.verts[0].co[2])
-            if e.verts[1] not in vert_list:
-                vert_list.add(e.verts[1])
-                verts_x.append(e.verts[1].co[0])
-                verts_y.append(e.verts[1].co[1])
-                verts_z.append(e.verts[1].co[2])
+        for v in vert_list:
+            verts_x.append(v.co[0])
+            verts_y.append(v.co[1])
+            verts_z.append(v.co[2])
 
         self.vert_list = vert_list
 
@@ -1609,9 +1618,8 @@ class ModelChunk(POFChunk):
 
     def get_mesh(self):
         """Returns a mesh object."""
-        ## TODO make own face list with texture info
         bsp_tree = self.bsp_tree
-        face_list = list()
+        raw_faces = list()
 
         for node in bsp_tree:
             if node.CHUNK_ID == 1:
@@ -1620,12 +1628,52 @@ class ModelChunk(POFChunk):
                 vert_list = node.vert_list
                 vert_norms = node.vert_norms
             elif node.CHUNK_ID == 2 or node.CHUNK_ID == 3:
-                face_list.append(node.vert_list)
+                raw_faces.append(node)
 
         m = Mesh()
         m.set_vert_list(vert_list, vert_norms)
-        m.set_face_list(face_list)
-        m.calculate_sharp_edges()
+        # until I figure something out for Mesh, we have
+        # to make our own Face list and Edge list
+        vert_list = list(m.vert_list)
+        num_verts = len(vert_list)
+        edge_list = set()
+        face_list = set()
+
+        for node in raw_faces:
+            edgea_verts = vert_list[node.vert_list[0]], vert_list[node.vert_list[1]]
+            edgeb_verts = vert_list[node.vert_list[1]], vert_list[node.vert_list[2]]
+            edgec_verts = vert_list[node.vert_list[2]], vert_list[node.vert_list[0]]
+            edgea = Edge(edgea_verts)
+            edgeb = Edge(edgeb_verts)
+            edgec = Edge(edgec_verts)
+            edge_list.add(edgea)
+            edge_list.add(edgeb)
+            edge_list.add(edgec)
+
+            if node.CHUNK_ID == 2:
+                # Flatpoly
+                f = Face([edgea, edgeb, edgec],
+                        vert_idx=node.vert_list,
+                        color=node.color,
+                        vert_norms=node.norm_list)
+                face_list.add(f)
+            elif node.CHUNK_ID == 3:
+                # Texpoly
+                uv = list()
+                for u, v in zip(node.u, node.v):
+                    uv.append([u, v])
+                f = Face([edgea, edgeb, edgec],
+                        vert_idx=node.vert_list,
+                        color=node.texture_id,
+                        textured=True,
+                        uv=uv,
+                        vert_norms=node.norm_list)
+                face_list.add(f)
+
+        m.edge_list = edge_list
+        m.face_list = face_list
+
+        # m.calculate_sharp_edges()
 
         return m
 
@@ -1678,14 +1726,16 @@ class ModelChunk(POFChunk):
                     cur_node.norm_list.append(v.normal)
 
             face_list.append(cur_node)
-            self.bsp_tree = list()
-            _generate_tree_recursion(vert_list, face_list)
-            self.bsp_tree.insert(0, self._defpoints)
+        self.bsp_tree = list()
+        self._generate_tree_recursion(vert_list, face_list)
+        self.bsp_tree.insert(0, self._defpoints)
 
     def _generate_tree_recursion(self, vert_list, face_list):
         bsp_tree = self.bsp_tree
-        defpoints = self._defpoints
-        if len(face_list) < 3:
+        defpoints = self._defpoints.vert_list
+        if len(face_list) == 0:
+            return
+        if 0 < len(face_list) < 3:
             # leaf
             for f in face_list:
                 fverts_x = list()
@@ -1776,17 +1826,21 @@ class ModelChunk(POFChunk):
         for f in face_list:
             is_back = False
             for v in f.vert_list:
-                if defpoints.vert_list[v] not in f_verts:
+                if defpoints[v] not in f_verts:
                     b_polys.append(f)
                     is_back = True
                     break
             if is_back:
                 for v in f.vert_list:
-                    b_verts.add(defpoints.vert_list[v])
+                    b_verts.add(defpoints[v])
             else:
                 f_polys.append(f)
 
         # Recurse into front list
+        num_faces = len(face_list)
+        num_fpolys = len(f_polys)
+        num_bpolys = len(b_polys)
+        num_fbpolys = num_fpolys + num_bpolys
         cur_idx = len(bsp_tree)
         bsp_tree.append(cur_node)
         self.bsp_tree = bsp_tree
@@ -2068,14 +2122,14 @@ class TreeChunk(POFChunk):
             eof_test = bin_data.read(4)
             if eof_test == b"":
                 break
-            if node_type:
-                this_node = ShieldLeaf()
+            if not node_type:
+                this_node = ShieldSplit()
                 this_node.min = unpack_vector(bin_data.read(12))
                 this_node.max = unpack_vector(bin_data.read(12))
                 this_node.front = unpack_uint(bin_data.read(4))
                 this_node.back = unpack_uint(bin_data.read(4))
             else:
-                this_node = ShieldSplit()
+                this_node = ShieldLeaf()
                 this_node.min = unpack_vector(bin_data.read(12))
                 this_node.max = unpack_vector(bin_data.read(12))
                 num_polygons = unpack_uint(bin_data.read(4))
