@@ -1609,6 +1609,7 @@ class ModelChunk(POFChunk):
 
     def get_mesh(self):
         """Returns a mesh object."""
+        ## TODO make own face list with texture info
         bsp_tree = self.bsp_tree
         face_list = list()
 
@@ -1629,6 +1630,7 @@ class ModelChunk(POFChunk):
         return m
 
     def set_mesh(self, m):
+        """Creates a BSP tree as a list of blocks"""
         # Basically:
         # defpoints = DefpointsBlock()
         # defpoints.set_mesh(m)
@@ -1637,10 +1639,171 @@ class ModelChunk(POFChunk):
         # self._polylist = polylist
         # self._generate_tree_recursion()
         # self.bsp_tree = self._defpoints + self._polylist
-        pass
+        defpoints = DefpointsBlock()
+        defpoints.set_mesh(m)
+        self._defpoints = defpoints
 
-    def _generate_tree_recursion(self):
-        pass
+        # make initial polylist
+        face_list = list()
+        vert_list = m.get_vert_list()
+        for f in m.face_list:
+            if f.textured:
+                ## TODO move this stuff to methods in the respective classes
+                cur_node = TexpolyBlock()
+                cur_node.normal = f.normal
+                cur_node.center = f.center
+                cur_node.radius = f.radius
+                cur_node.texture_id = f.color
+                cur_node.vert_list = list()
+                cur_node.norm_list = list()
+                cur_node.u = list()
+                cur_node.v = list()
+
+                for v in f.vert_list:
+                    cur_node.vert_list.append(v.index)
+                    cur_node.norm_list.append(v.normal)
+                    cur_node.u.append(v.uv[0])
+                    cur_node.v.append(v.uv[1])
+            else:
+                cur_node = FlatpolyBlock()
+                cur_node.normal = f.normal
+                cur_node.center = f.center
+                cur_node.radius = f.radius
+                cur_node.color = f.color
+                cur_node.vert_list = list()
+                cur_node.norm_list = list()
+
+                for v in f.vert_list:
+                    cur_node.vert_list.append(v.index)
+                    cur_node.norm_list.append(v.normal)
+
+            face_list.append(cur_node)
+            self.bsp_tree = list()
+            _generate_tree_recursion(vert_list, face_list)
+            self.bsp_tree.insert(0, self._defpoints)
+
+    def _generate_tree_recursion(self, vert_list, face_list):
+        bsp_tree = self.bsp_tree
+        defpoints = self._defpoints
+        if len(face_list) < 3:
+            # leaf
+            for f in face_list:
+                fverts_x = list()
+                fverts_y = list()
+                fverts_z = list()
+                for v in f.vert_list:
+                    fverts_x.append(defpoints[v][0])
+                    fverts_y.append(defpoints[v][1])
+                    fverts_z.append(defpoints[v][2])
+                fmax_x = max(fverts_x)
+                fmax_y = max(fverts_y)
+                fmax_z = max(fverts_z)
+                fmin_x = min(fverts_x)
+                fmin_y = min(fverts_y)
+                fmin_z = min(fverts_z)
+                fmax_pnt = vector(fmax_x, fmax_y, fmax_z)
+                fmin_pnt = vector(fmin_x, fmin_y, fmin_z)
+
+                cur_node = BoundboxBlock()
+                cur_node.max = fmax_pnt
+                cur_node.min = fmin_pnt
+                bsp_tree.append(cur_node)
+                bsp_tree.append(f)
+                bsp_tree.append(EndBlock())
+
+                self.bsp_tree = bsp_tree
+                return None
+
+        # else sortnorm
+        # Get min/max points of entire list
+        verts_x = list()
+        verts_y = list()
+        verts_z = list()
+        for v in vert_list:
+            verts_x.append(v[0])
+            verts_y.append(v[1])
+            verts_z.append(v[2])
+        max_x = max(verts_x)
+        max_y = max(verts_y)
+        max_z = max(verts_z)
+        min_x = min(verts_x)
+        min_y = min(verts_y)
+        min_z = min(verts_z)
+        max_pnt = vector(max_x, max_y, max_z)
+        min_pnt = vector(min_x, min_y, min_z)
+
+        # get center point (sortnorm point)
+        d_x = max_x - min_x
+        d_y = max_y - min_y
+        d_z = max_z - min_z
+        ctr_x = max_x - (d_x / 2)
+        ctr_y = max_y - (d_y / 2)
+        ctr_z = max_z - (d_y / 2)
+        ctr_pnt = vector(ctr_x, ctr_y, ctr_z)
+
+        # get longest axis
+        if max(d_x, d_y, d_z) is d_x:
+            sortnorm = vector(1, 0, 0)
+            snorm_idx = 0
+        elif max(d_x, d_y, d_z) is d_y:
+            sortnorm = vector(0, 1, 0)
+            snorm_idx = 1
+        elif max(d_x, d_y, d_z) is d_z:
+            sortnorm = vector(0, 0, 1)
+            snorm_idx = 2
+        else:
+            raise InvalidBSPError(None, "Can't get bound box.")
+
+        # make front sortnorm
+        cur_node = SortnormBlock()
+        cur_node.min = min_pnt
+        cur_node.max = max_pnt
+        cur_node.plane_point = ctr_pnt
+        cur_node.plane_normal = sortnorm
+
+        # determine front/back verts
+        f_verts = set()
+        b_verts = set()
+        for v in vert_list:
+            if v[snorm_idx] >= ctr_pnt[snorm_idx]:
+                f_verts.add(v)
+            else:
+                b_verts.add(v)
+
+        # determine front/back polys
+        f_polys = list()
+        b_polys = list()
+        for f in face_list:
+            is_back = False
+            for v in f.vert_list:
+                if defpoints.vert_list[v] not in f_verts:
+                    b_polys.append(f)
+                    is_back = True
+                    break
+            if is_back:
+                for v in f.vert_list:
+                    b_verts.add(defpoints.vert_list[v])
+            else:
+                f_polys.append(f)
+
+        # Recurse into front list
+        cur_idx = len(bsp_tree)
+        bsp_tree.append(cur_node)
+        self.bsp_tree = bsp_tree
+        self._generate_tree_recursion(f_verts, f_polys)
+
+        # Get back_offset
+        bsp_tree = self.bsp_tree
+        added_nodes = bsp_tree[cur_idx:]
+        back_offset = 0
+        for node in added_nodes:
+            back_offset += len(node)
+        self.bsp_tree[cur_idx].back_offset = back_offset
+
+        # Recurse into back list
+        self._generate_tree_recursion(b_verts, b_polys)
+
+        # Done with this branch!
 
     def __len__(self):
         chunk_length = 84
@@ -1971,6 +2134,7 @@ class TreeChunk(POFChunk):
         return self.shield_tree
 
     def _generate_tree_recursion(self, vert_list, face_list):
+        ## TODO rewrite to be standard with method in ModelChunk
         verts_x = list()
         verts_y = list()
         verts_z = list()
@@ -2308,7 +2472,7 @@ class TexpolyBlock(POFChunk):
         chunk += pack_float(self.normal)
         chunk += pack_float(self.center)
         chunk += pack_float(self.radius)
-        chunk += pack_int(len(self.vert_list))
+        chunk += pack_int(len(vert_list))
         chunk += pack_int(self.texture_id)
 
         for i, vert in enumerate(vert_list):
@@ -2330,6 +2494,10 @@ class TexpolyBlock(POFChunk):
 
 class SortnormBlock(POFChunk):
     CHUNK_ID = 4
+    front_offset = 104
+    prelist_offset = 80
+    postlist_offset = 88
+    online_offset = 96
     def read_chunk(self, bin_data):
         self.plane_normal = unpack_vector(bin_data.read(12))
         self.plane_point = unpack_vector(bin_data.read(12))
