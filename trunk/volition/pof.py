@@ -1727,42 +1727,83 @@ class ModelChunk(POFChunk):
 
             face_list.append(cur_node)
         self.bsp_tree = list()
+        print("Total faces: ", len(face_list))
+        self._faces_added = 0
         self._generate_tree_recursion(vert_list, face_list)
         self.bsp_tree.insert(0, self._defpoints)
+
+    def _add_faces(self, face_list):
+        bsp_tree = self.bsp_tree
+        defpoints = self._defpoints.vert_list
+        #print("Adding {} faces".format(len(face_list)))
+        self._faces_added += len(face_list)
+        #print("Total faces added: ", self._faces_added)
+        for f in face_list:
+            fverts_x = list()
+            fverts_y = list()
+            fverts_z = list()
+            for v in f.vert_list:
+                fverts_x.append(defpoints[v][0])
+                fverts_y.append(defpoints[v][1])
+                fverts_z.append(defpoints[v][2])
+            fmax_x = max(fverts_x)
+            fmax_y = max(fverts_y)
+            fmax_z = max(fverts_z)
+            fmin_x = min(fverts_x)
+            fmin_y = min(fverts_y)
+            fmin_z = min(fverts_z)
+            fmax_pnt = vector(fmax_x, fmax_y, fmax_z)
+            fmin_pnt = vector(fmin_x, fmin_y, fmin_z)
+
+            cur_node = BoundboxBlock()
+            cur_node.max = fmax_pnt
+            cur_node.min = fmin_pnt
+            bsp_tree.append(cur_node)
+            bsp_tree.append(f)
+            bsp_tree.append(EndBlock())
+
+            self.bsp_tree = bsp_tree
+
+    def _make_split(self, ctr_pnt, snorm_idx, vert_list, face_list):
+        defpoints = self._defpoints.vert_list
+        # determine front/back verts
+        ## TODO move this to another function
+        f_verts = set()
+        b_verts = set()
+        for v in vert_list:
+            if v[snorm_idx] >= ctr_pnt[snorm_idx]:
+                f_verts.add(v)
+            else:
+                b_verts.add(v)
+
+        # determine front/back polys
+        ## TODO move this to another function
+        f_polys = list()
+        b_polys = list()
+        for f in face_list:
+            is_back = False
+            for v in f.vert_list:
+                if defpoints[v] not in f_verts:
+                    b_polys.append(f)
+                    is_back = True
+                    break
+            if is_back:
+                for v in f.vert_list:
+                    b_verts.add(defpoints[v])
+            else:
+                f_polys.append(f)
+
+        return f_verts, b_verts, f_polys, b_polys
 
     def _generate_tree_recursion(self, vert_list, face_list):
         bsp_tree = self.bsp_tree
         defpoints = self._defpoints.vert_list
         if len(face_list) == 0:
             return
-        if 0 < len(face_list) < 3:
+        if 0 < len(face_list) < 4:
             # leaf
-            for f in face_list:
-                fverts_x = list()
-                fverts_y = list()
-                fverts_z = list()
-                for v in f.vert_list:
-                    fverts_x.append(defpoints[v][0])
-                    fverts_y.append(defpoints[v][1])
-                    fverts_z.append(defpoints[v][2])
-                fmax_x = max(fverts_x)
-                fmax_y = max(fverts_y)
-                fmax_z = max(fverts_z)
-                fmin_x = min(fverts_x)
-                fmin_y = min(fverts_y)
-                fmin_z = min(fverts_z)
-                fmax_pnt = vector(fmax_x, fmax_y, fmax_z)
-                fmin_pnt = vector(fmin_x, fmin_y, fmin_z)
-
-                cur_node = BoundboxBlock()
-                cur_node.max = fmax_pnt
-                cur_node.min = fmin_pnt
-                bsp_tree.append(cur_node)
-                bsp_tree.append(f)
-                bsp_tree.append(EndBlock())
-
-                self.bsp_tree = bsp_tree
-                return None
+            self._add_faces(face_list)
+            return None
 
         # else sortnorm
         # Get min/max points of entire list
@@ -1789,7 +1830,8 @@ class ModelChunk(POFChunk):
         ctr_x = max_x - (d_x / 2)
         ctr_y = max_y - (d_y / 2)
         ctr_z = max_z - (d_y / 2)
-        ctr_pnt = vector(ctr_x, ctr_y, ctr_z)
+        ctr_pnt = [ctr_x, ctr_y, ctr_z]
+        d = vector(d_x, d_y, d_z)
 
         # get longest axis
         if max(d_x, d_y, d_z) is d_x:
@@ -1808,33 +1850,91 @@ class ModelChunk(POFChunk):
         cur_node = SortnormBlock()
         cur_node.min = min_pnt
         cur_node.max = max_pnt
+
+        split_stuff = self._make_split(ctr_pnt, snorm_idx, vert_list, face_list)
+        f_verts = split_stuff[0]
+        b_verts = split_stuff[1]
+        f_polys = split_stuff[2]
+        b_polys = split_stuff[3]
+        # We'll call 15% good enough
+        num_fpolys = len(f_polys)
+        num_bpolys = len(b_polys)
+        num_polys = len(face_list)
+        if num_fpolys == num_bpolys:
+            good_enough = True
+        elif num_fpolys > num_bpolys:
+            if num_fpolys - num_bpolys < 0.15 * num_polys:
+                good_enough = True
+            else:
+                longest_list = 1
+                good_enough = False
+        elif num_fpolys < num_bpolys:
+            if num_bpolys - num_fpolys < 0.15 * num_polys:
+                good_enough = True
+            else:
+                good_enough = False
+                longest_list = -1
+
+        num_tries = 0
+        real_num_tries = 0
+        ratio = 0.15
+        while not good_enough:
+            # Move split point towards the largest side
+            num_tries += 1
+            real_num_tries += 1     # does not get decremented EVER
+            if 1000 >= real_num_tries > 500:
+                ratio = 0.001
+            if 2000 >= real_num_tries > 1000:
+                ratio = 0.0001
+            if 3000 >= real_num_tries > 2000:
+                ratio = 0.00001
+            if real_num_tries > 3000:
+                # fuck it, infinite loooop
+                # just dump the unordered faces
+                self._add_faces(face_list)
+                return None
+            if ratio > 1.0e-50:
+                ratio = 0.01
+            ctr_pnt[snorm_idx] += ratio * d[snorm_idx] * longest_list
+            split_stuff = self._make_split(ctr_pnt, snorm_idx, vert_list, face_list)
+            f_verts = split_stuff[0]
+            b_verts = split_stuff[1]
+            f_polys = split_stuff[2]
+            b_polys = split_stuff[3]
+            # We'll call 15% good enough
+            num_fpolys = len(f_polys)
+            num_bpolys = len(b_polys)
+            num_polys = len(face_list)
+            if num_tries == 15:
+                if num_fpolys == 0:
+                    num_tries -= 1
+                    good_enough = False
+                    longest_list = -1
+                    continue
+                elif num_bpolys == 0:
+                    num_tries -= 1
+                    good_enough = False
+                    longest_list = 1
+                    continue
+                else:
+                    good_enough = True
+                    continue
+            if num_fpolys == num_bpolys:
+                good_enough = True
+            elif num_fpolys > num_bpolys:
+                if num_fpolys - num_bpolys < 0.15 * num_polys:
+                    good_enough = True
+                else:
+                    good_enough = False
+            elif num_fpolys < num_bpolys:
+                if num_bpolys - num_fpolys < 0.15 * num_polys:
+                    good_enough = True
+                else:
+                    good_enough = False
+            ratio *= 0.5
+
         cur_node.plane_point = ctr_pnt
         cur_node.plane_normal = sortnorm
-
-        # determine front/back verts
-        f_verts = set()
-        b_verts = set()
-        for v in vert_list:
-            if v[snorm_idx] >= ctr_pnt[snorm_idx]:
-                f_verts.add(v)
-            else:
-                b_verts.add(v)
-
-        # determine front/back polys
-        f_polys = list()
-        b_polys = list()
-        for f in face_list:
-            is_back = False
-            for v in f.vert_list:
-                if defpoints[v] not in f_verts:
-                    b_polys.append(f)
-                    is_back = True
-                    break
-            if is_back:
-                for v in f.vert_list:
-                    b_verts.add(defpoints[v])
-            else:
-                f_polys.append(f)
 
         # Recurse into front list
         num_faces = len(face_list)
