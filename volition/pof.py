@@ -183,13 +183,13 @@ class Mesh:
     def set_vert_list(self, vert_list, vert_norms = False):
         """Takes a list of vertex coordinates and creates a set of Vertex objects."""
 
-        verts = set()
+        verts = list()
         if vert_norms:
             for v, n in zip(vert_list, vert_norms):
-                verts.add(Vertex(v, n))
+                verts.append(Vertex(v, n))
         else:
             for v in vert_list:
-                verts.add(Vertex(v))
+                verts.append(Vertex(v))
         self.vert_list = verts
 
         try:
@@ -220,9 +220,9 @@ class Mesh:
 
     def set_edge_list(self, edge_list):
 
-        edges = set()
+        edges = list()
         for e in edge_list:
-            edges.add(Edge(e[:2], e[2]))
+            edges.append(Edge(e[:2], e[2]))
 
         try:
             self._make_index()
@@ -255,7 +255,7 @@ class Mesh:
 
     def set_face_list(self, face_list, by_edges = False):
 
-        faces = set()
+        faces = list()
 
         # We want to support both by_edges and !by_edges
         # because the face list will be by edges when
@@ -267,10 +267,10 @@ class Mesh:
                 edge_a = edges[f[0]]
                 edge_b = edges[f[1]]
                 edge_c = edges[f[2]]
-                faces.add(Face([edge_a, edge_b, edge_c]))
+                faces.append(Face([edge_a, edge_b, edge_c]))
         else:
-            verts = list(self.vert_list)
-            edges = self.edge_list
+            verts = self.vert_list
+            edges = list()
             for f in face_list:
                 edge_a_verts = (verts[f[0]], verts[f[1]])
                 edge_b_verts = (verts[f[1]], verts[f[2]])
@@ -280,12 +280,12 @@ class Mesh:
                 edge_b = Edge(edge_b_verts)
                 edge_c = Edge(edge_c_verts)
 
-                edges.add(edge_a)
-                edges.add(edge_b)
-                edges.add(edge_c)
+                edges.append(edge_a)
+                edges.append(edge_b)
+                edges.append(edge_c)
 
                 faces.add(Face([edge_a, edge_b, edge_c]))
-                self.edge_list = edges
+            self.edge_list = edges
 
         self.face_list = faces
 
@@ -1827,6 +1827,7 @@ class ModelChunk(POFChunk):
                 # make a face
                 del face_list[1]
                 self._add_faces(face_list)
+                return
             # we cheat and make the split based on the polys
             ax = face_list[0].center[0]     # first face center
             ay = face_list[0].center[1]
