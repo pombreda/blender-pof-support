@@ -1284,7 +1284,7 @@ class TurretChunk(POFChunk):           # TGUN and TMIS
             firing_points.append(list())
 
             for j in range(num_firing_points):
-                firing_points[i].append(unpack_int(bin_data.read(4)))
+                firing_points[i].append(unpack_vector(bin_data.read(12)))
 
         self.barrel_sobj = barrel_sobj
         self.base_sobj = base_sobj
@@ -1304,13 +1304,12 @@ class TurretChunk(POFChunk):           # TGUN and TMIS
         barrel_sobj = self.barrel_sobj
         base_sobj = self.base_sobj
         turret_norm = self.turret_norm
-        num_firing_points = self.num_firing_points
         firing_points = self.firing_points
 
         num_banks = len(firing_points)
         chunk += pack_int(num_banks)
 
-        for i in range(self.num_banks):
+        for i in range(num_banks):
             chunk += pack_int(barrel_sobj[i])
             chunk += pack_int(base_sobj[i])
             chunk += pack_float(turret_norm[i])
@@ -2737,6 +2736,7 @@ def read_pof(pof_file):
     while True:
         chunk_id = pof_file.read(4)
         logging.debug("Found chunk {}".format(chunk_id))
+        print("Found chunk ", chunk_id)
         if chunk_id != b"":
             chunk_length = unpack_int(pof_file.read(4))
             logging.debug("Chunk length {}".format(chunk_length))
