@@ -1728,8 +1728,13 @@ class ModelChunk(POFChunk):
             face_list.append(cur_node)
         self.bsp_tree = list()
         print("Total faces: ", len(face_list))
-        self._faces_added = 0
+        self._dumpeda = 0
+        self._dumpedb = 0
+        self._dumpedc = 0
         self._generate_tree_recursion(face_list)
+        print("Faces dumped, condition 1: ", self._dumpeda)
+        print("Faces dumped, condition 2: ", self._dumpedb)
+        print("Faces dumped, condition 3: ", self._dumpedc)
         self.bsp_tree.insert(0, self._defpoints)
         self.bsp_tree.append(EndBlock())
 
@@ -1737,8 +1742,8 @@ class ModelChunk(POFChunk):
         bsp_tree = self.bsp_tree
         defpoints = self._defpoints.vert_list
         #print("Adding {} faces".format(len(face_list)))
-        self._faces_added += len(face_list)
-        print("Total faces added: ", self._faces_added)
+        #self._faces_added += len(face_list)
+        #print("Total faces added: ", self._faces_added)
         for f in face_list:
             fverts_x = list()
             fverts_y = list()
@@ -1815,8 +1820,8 @@ class ModelChunk(POFChunk):
         return list(ctr_pnt), max_axis, node_norm
 
     def _generate_tree_recursion(self, face_list):
-        # check for infinite recursion
         if not len(face_list):
+            # nothing to do...
             return
         # if only one, make a face
         if len(face_list) == 1:
@@ -1825,7 +1830,8 @@ class ModelChunk(POFChunk):
         elif len(face_list) == 2:
             if face_list[0].center == face_list[1].center:
                 # make a face
-                del face_list[1]
+                #print("Dumping {} faces, condition 3".format(len(face_list)))
+                self._dumpeda += len(face_list)
                 self._add_faces(face_list)
                 return
             # we cheat and make the split based on the polys
@@ -1864,7 +1870,8 @@ class ModelChunk(POFChunk):
                 real_tries += 1     # does not get decremented
                 if real_tries > 500:
                     # panic, just dump polys into unordered list
-                    print("Panic!")
+                    #print("Dumping {} faces, condition 1".format(len(face_list)))
+                    self._dumpedb += len(face_list)
                     self._add_faces(face_list)
                     return
                 on_back = False
@@ -1908,7 +1915,8 @@ class ModelChunk(POFChunk):
 
             # something bad happened and an empty list slipped through
             if not fnum or not bnum:
-                print("Panic!")
+                #print("Dumping {} faces, condition 2".format(len(face_list)))
+                self._dumpedc += len(face_list)
                 self._add_faces(face_list)
                 return
         # get actual min, max, make sortnorm
