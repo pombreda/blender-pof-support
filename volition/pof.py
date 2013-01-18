@@ -1729,11 +1729,14 @@ class ModelChunk(POFChunk):
         self.bsp_tree = list()
         print("Total faces: ", len(face_list))
         self._dumpeda = 0
-        self._dumpedb = 0
+        self._dumpedb = list()
+        self._times_dumpedb = 0
         self._dumpedc = 0
         self._generate_tree_recursion(face_list)
         print("Faces dumped, condition 1: ", self._dumpeda)
-        print("Faces dumped, condition 2: ", self._dumpedb)
+        print("Faces dumped, condition 2: ", sum(self._dumpedb))
+        print("Max condition 2 dump: ", max(self._dumpedb))
+        print("Num times dumped, condition 2: ", self._times_dumpedb)
         print("Faces dumped, condition 3: ", self._dumpedc)
         self.bsp_tree.insert(0, self._defpoints)
         self.bsp_tree.append(EndBlock())
@@ -1744,31 +1747,24 @@ class ModelChunk(POFChunk):
         #print("Adding {} faces".format(len(face_list)))
         #self._faces_added += len(face_list)
         #print("Total faces added: ", self._faces_added)
-        for f in face_list:
-            fverts_x = list()
-            fverts_y = list()
-            fverts_z = list()
-            for v in f.vert_list:
-                fverts_x.append(defpoints[v][0])
-                fverts_y.append(defpoints[v][1])
-                fverts_z.append(defpoints[v][2])
-            fmax_x = max(fverts_x)
-            fmax_y = max(fverts_y)
-            fmax_z = max(fverts_z)
-            fmin_x = min(fverts_x)
-            fmin_y = min(fverts_y)
-            fmin_z = min(fverts_z)
-            fmax_pnt = vector(fmax_x, fmax_y, fmax_z)
-            fmin_pnt = vector(fmin_x, fmin_y, fmin_z)
+        max_pnt, min_pnt = self._get_bounds(face_list)
+        bbox = BoundboxBlock()
+        bbox.max = max_pnt
+        bbox.min = min_pnt
+        bsp_tree.append(bbox)
+        bsp_tree += face_list
+        bsp_tree.append(EndBlock())
 
-            cur_node = BoundboxBlock()
-            cur_node.max = fmax_pnt
-            cur_node.min = fmin_pnt
-            bsp_tree.append(cur_node)
-            bsp_tree.append(f)
-            bsp_tree.append(EndBlock())
+##        for f in face_list:
+##            fmax_pnt, fmin_pnt = self._get_bounds([f])
+##            cur_node = BoundboxBlock()
+##            cur_node.max = fmax_pnt
+##            cur_node.min = fmin_pnt
+##            bsp_tree.append(cur_node)
+##            bsp_tree.append(f)
+##            bsp_tree.append(EndBlock())
 
-            self.bsp_tree = bsp_tree
+        self.bsp_tree = bsp_tree
 
     def _make_split(self, ctr_pnt, max_axis, face_list):
         front_list = list()
@@ -1793,9 +1789,9 @@ class ModelChunk(POFChunk):
         max_x = max(verts_x) + 0.1
         max_y = max(verts_y) + 0.1
         max_z = max(verts_z) + 0.1
-        min_x = min(verts_x) + 0.1
-        min_y = min(verts_y) + 0.1
-        min_z = min(verts_z) + 0.1
+        min_x = min(verts_x) - 0.1
+        min_y = min(verts_y) - 0.1
+        min_z = min(verts_z) - 0.1
         max_pnt = vector(max_x, max_y, max_z)
         min_pnt = vector(min_x, min_y, min_z)
         return max_pnt, min_pnt
@@ -1871,7 +1867,8 @@ class ModelChunk(POFChunk):
                 if real_tries > 500:
                     # panic, just dump polys into unordered list
                     #print("Dumping {} faces, condition 1".format(len(face_list)))
-                    self._dumpedb += len(face_list)
+                    self._dumpedb.append(len(face_list))
+                    self._times_dumpedb += 1
                     self._add_faces(face_list)
                     return
                 on_back = False
