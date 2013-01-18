@@ -2,39 +2,20 @@
 #labels Featured,Phase-Implementation
 
 ==Immediate to-do list ~Kopachris==
- * ~~Update ModelChunk.get_mesh() to make its own face list~~
- * ~~set_mesh() and generate_tree_recursion() for model chunk~~ _Analyze PCS2's BSP functions.  Again._
- * verify_pof()
  * Update SLDC recursion functions to match ModelChunk recursion functions
+ * verify_pof()
+ * fix calculate_normals() and calculate_sharp_edges()
 
 ==Global to-do list==
  * Finish writing volition module
   * POF utilities
-   * BSP tree generator
+   * ~~BSP tree generator~~
    * Helper data types
     * Mesh
-     * ~~Vertex normals calculation~~
-     * ~~Vertex normal indexing~~
-     * ~~Calculate seams~~
-     * Calculate edge_list from face_list
-     * Calculate vert_list from edge_list
-   * Classes for each chunk
-    * ~~Header~~
-    * ~~Textures~~
-    * ~~Paths~~
-    * ~~Special points~~
-    * ~~Shield mesh~~
-    * ~~Eye points~~
-    * ~~Gun points~~
-    * ~~Turret gun points~~
-    * ~~Dock points~~
-    * ~~Thruster glows~~
-    * Subobjects
-    * ~~Insignia~~
-    * ~~Autocentering~~
-    * ~~Glow points~~
-    * ~~Shield mesh collision tree~~
-    * ~~BSP data blocks~~
+     * Vertex normals calculation
+     * Vertex normal indexing
+     * Calculate seams
+   * ~~Classes for each chunk~~
 
 ==Goals for the far distant future==
  * Calculate moment of inertia during export
