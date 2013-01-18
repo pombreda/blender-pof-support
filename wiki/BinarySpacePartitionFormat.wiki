@@ -88,8 +88,8 @@ The point of a BSP tree is to speed up rendering by splitting a model recursivel
 
 ===A few rules for FreeSpace BSP data===
  * A `sortnorm` is ALWAYS followed by three End-of-Tree blocks, representing what used to be `prelist`, `postlist`, and `online` when IDTA was an octree rather than a binary tree.
- * An End-of-Tree block ALWAYS follows a polygon block.
- * A bounding-box block ALWAYS preceeds a polygon block, to allow for faster lighting and collision calculation, as a leaf node of the BSP tree may contain multiple polygons.
+ * ~~A bounding-box block ALWAYS preceeds a polygon block, to allow for faster lighting and collision calculation, as a leaf node of the BSP tree may contain multiple polygons.~~ A bounding-box block ALWAYS preceeds a list of polygons.
+ * ~~An End-of-Tree block ALWAYS follows a polygon block.~~  An End-of-Tree block ALWAYS follows a list of polygons.
  * It's unnecessary to designate the end of a branch with an End-of-Tree block, as `sortnorm`s do all the work.
  * The end of the entire BSP tree is designated by two End-of-Tree blocks following a polygon block.
 
