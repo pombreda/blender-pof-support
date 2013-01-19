@@ -2,9 +2,10 @@
 #labels Featured,Phase-Implementation
 
 ==Immediate to-do list ~Kopachris==
- * Update SLDC recursion functions to match ModelChunk recursion functions
+ * Fix duplicate verts, edges.
+ * ~~Update SLDC recursion functions to match ModelChunk recursion functions~~
  * verify_pof()
- * fix calculate_normals() and calculate_sharp_edges()
+ * ~~fix calculate_normals() and calculate_sharp_edges()~~
 
 ==Global to-do list==
  * Finish writing volition module
