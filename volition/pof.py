@@ -237,15 +237,15 @@ class Mesh:
     def get_face_list(self, by_edges = False):
 
         if not self._fei or not self._fvi:
-            try:
-                self._make_index()
-            except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
-                raise GeometryError(None, "Incomplete geometry - can't make index.")
+            #try:
+            self._make_index()
+            #except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
+                #raise GeometryError(None, "Incomplete geometry - can't make index.")
 
         if by_edges:
-            face_list = [self._fei.values(), []]
+            face_list = [list(self._fei.values()), []]
         else:
-            face_list = [self._fvi.values(), []]
+            face_list = [list(self._fvi.values()), []]
 
         faces = self.face_list
         for f in faces:
@@ -263,15 +263,15 @@ class Mesh:
 
         if by_edges:
             edges = list(self.edge_list)
-            for f in face_list:
+            for i, f in enumerate(face_list):
                 edge_a = edges[f[0]]
                 edge_b = edges[f[1]]
                 edge_c = edges[f[2]]
-                faces.append(Face([edge_a, edge_b, edge_c]))
+                faces.append(Face([edge_a, edge_b, edge_c], face_idx=i))
         else:
             verts = self.vert_list
             edges = list()
-            for f in face_list:
+            for i, f in enumerate(face_list):
                 edge_a_verts = (verts[f[0]], verts[f[1]])
                 edge_b_verts = (verts[f[1]], verts[f[2]])
                 edge_c_verts = (verts[f[2]], verts[f[0]])
@@ -284,7 +284,7 @@ class Mesh:
                 edges.append(edge_b)
                 edges.append(edge_c)
 
-                faces.add(Face([edge_a, edge_b, edge_c]))
+                faces.append(Face([edge_a, edge_b, edge_c], face_idx=i))
             self.edge_list = edges
 
         self.face_list = faces
@@ -368,7 +368,7 @@ class Mesh:
         edges = self.edge_list
         verts = self.vert_list
 
-        for v, el in vei:
+        for v, el in vei.items():
             smooth_norm_x = 0
             smooth_norm_y = 0
             smooth_norm_z = 0
@@ -400,7 +400,7 @@ class Mesh:
         # if you can figure out how to do this without
         # so many nested loops, feel free to implement it
 
-        for v, fl in vfi:
+        for v, fl in vfi.items():
             for f in fl:
                 cur_vert_idx = fvi[f].index(v)
                 for e in fei[f]:
@@ -440,18 +440,18 @@ class Mesh:
         for i, e in enumerate(edges):
             evi[i] = set({verts.index(e.verts[0]), verts.index(e.verts[1])})
             ef = set()
-            for j, k in fei:
+            for j, k in fei.items():
                 if i in k:
                     ef.add(j)
             efi[i] = ef
 
-        for i in len(verts):
+        for i in range(len(verts)):
             ve = set()
             vf = set()
-            for j, k in evi:
+            for j, k in evi.items():
                 if i in k:
                     ve.add(j)
-            for j, k in fvi:
+            for j, k in fvi.items():
                 if i in k:
                     ve.add(j)
             vei[i] = ve
@@ -526,8 +526,9 @@ class Edge:
 
 
 class Face:
-    def __init__(self, edge_list, vert_idx=False, color=False, textured=False, uv=False, vert_norms=False):
+    def __init__(self, edge_list, face_idx=False, vert_idx=False, color=False, textured=False, uv=False, vert_norms=False):
         vert_list = set()
+        self.face_idx = face_idx    # an index in some face list
         # add FaceVert objects to Face
         for e in edge_list:
             for v in e.verts:
@@ -1104,7 +1105,7 @@ class ShieldChunk(POFChunk):
 
         shld_mesh = Mesh()
         shld_mesh.set_vert_list(self.vert_list)
-        shld_mesh.set_face_list([self.face_list, self.face_normals])
+        shld_mesh.set_face_list(self.face_list)
         return shld_mesh
 
     def set_mesh(self, m):
@@ -1129,7 +1130,7 @@ class ShieldChunk(POFChunk):
         # so this takes almost no time at all
 
         face_neighbors = list()
-        for i, f1 in fei:
+        for i, f1 in fei.items():
             face_neighbors.append(list())
             for e in f1:
                 for f2 in efi[e]:
@@ -1825,8 +1826,6 @@ class ModelChunk(POFChunk):
         elif len(face_list) == 2:
             if face_list[0].center == face_list[1].center:
                 # make a face
-                #print("Dumping {} faces, condition 3".format(len(face_list)))
-                #self._dumpeda += len(face_list)
                 self._add_faces(face_list)
                 return
             # we cheat and make the split based on the polys
@@ -1865,9 +1864,6 @@ class ModelChunk(POFChunk):
                 real_tries += 1     # does not get decremented
                 if real_tries > 500:
                     # panic, just dump polys into unordered list
-                    #print("Dumping {} faces, condition 1".format(len(face_list)))
-                    #self._dumpedb.append(len(face_list))
-                    #self._times_dumpedb += 1
                     self._add_faces(face_list)
                     return
                 on_back = False
@@ -1911,8 +1907,6 @@ class ModelChunk(POFChunk):
 
             # something bad happened and an empty list slipped through
             if not fnum or not bnum:
-                #print("Dumping {} faces, condition 2".format(len(face_list)))
-                #self._dumpedc += len(face_list)
                 self._add_faces(face_list)
                 return
         # get actual min, max, make sortnorm
@@ -2251,125 +2245,195 @@ class TreeChunk(POFChunk):
 
         return chunk
 
-    def make_shield_collision_tree(self, shield_chunk):
+    def make_shield_collision_tree(self, shield_chunk=None, m=None):
         """Should be called if any geometry on the shield is modified."""
-        vert_list = frozenset(shield_chunk.vert_list)
-        face_list = shield_chunk.face_list
-        self.vert_list = vert_list
-        self.face_list = set(face_list)      # for testing indices on leaf nodes
+        if m is not None:
+            if shield_chunk is not None:
+                shield_chunk.set_mesh(m)
+        else:
+            if shield_chunk is not None:
+                m = shield_chunk.get_mesh()
+            else:
+                raise InvalidChunkError(self, "Must have either shield chunk or mesh")
+
+        face_list = m.face_list     # Hopefully the same index as the shield chunk
+        #self._vert_list = m.get_vert_list()
+
         self.shield_tree = list()
+        self._generate_tree_recursion(face_list)
 
-        # self.shield_tree is a list of nodes
-        # generate_tree_recursion() only operates on what it considers
-        # to be the front list, then calls recursively for the child list
-        # After getting a return, it calls recursively for the back list,
-        # which is that call's front list
+    def _add_faces(self, face_list):
+        cur_node = ShieldLeaf()
+        max_pnt, min_pnt = self._get_bounds(face_list)
+        cur_node.max = max_pnt
+        cur_node.min = min_pnt
+        for f in face_list:
+            cur_node.face_list.append(f.face_idx)
+        self.shield_tree.append(cur_node)
 
-        self._generate_tree_recursion(vert_list, face_list)
+    def _make_split(self, ctr_pnt, max_axis, face_list):
+        front_list = list()
+        back_list = list()
+        for f in face_list:
+            if f.center[max_axis] >= ctr_pnt[max_axis]:
+                front_list.append(f)
+            else:
+                back_list.append(f)
+        return front_list, back_list
 
-        return self.shield_tree
-
-    def _generate_tree_recursion(self, vert_list, face_list):
-        ## TODO rewrite to be standard with method in ModelChunk
+    def _get_bounds(self, face_list):
         verts_x = list()
         verts_y = list()
         verts_z = list()
-
-        for v in vert_list:
-            verts_x.append(v[0])
-            verts_y.append(v[1])
-            verts_z.append(v[2])
-
-        max_x = max(verts_x)
-        max_y = max(verts_y)
-        max_z = max(verts_z)
-        min_x = min(verts_x)
-        min_y = min(verts_y)
-        min_z = min(verts_z)
-
+        for f in face_list:
+            for v in f.vert_list:
+                verts_x.append(v.co[0])
+                verts_y.append(v.co[1])
+                verts_z.append(v.co[2])
+        max_x = max(verts_x) + 0.1
+        max_y = max(verts_y) + 0.1
+        max_z = max(verts_z) + 0.1
+        min_x = min(verts_x) - 0.1
+        min_y = min(verts_y) - 0.1
+        min_z = min(verts_z) - 0.1
         max_pnt = vector(max_x, max_y, max_z)
         min_pnt = vector(min_x, min_y, min_z)
+        return max_pnt, min_pnt
 
-        if len(face_list) < 3:      # rather arbitrary stopping point
-            cur_node = ShieldLeaf()
-            cur_node.max = max_pnt
-            cur_node.min = min_pnt
-            node_faces = list()
-            shield_faces = self.face_list
-            for f in face_list:
-                node_faces.append(shield_faces.index(f))
-            cur_node.face_list = node_faces
-            self.shield_tree.append(cur_node)
+    def _get_split_plane(self, max_pnt, min_pnt):
+        dx = max_pnt[0] - min_pnt[0]
+        dy = max_pnt[1] - min_pnt[1]
+        dz = max_pnt[2] - min_pnt[2]
+        cx = min_pnt[0] + dx / 2
+        cy = min_pnt[1] + dy / 2
+        cz = min_pnt[2] + dz / 2
+        ctr_pnt = vector(cx, cy, cz)
+        if max([dx, dy, dz]) is dx:
+            max_axis = 0
+            node_norm = vector(1, 0, 0)
+        elif max([dx, dy, dz]) is dy:
+            max_axis = 1
+            node_norm = vector(0, 1, 0)
+        elif max([dx, dy, dz]) is dz:
+            max_axis = 2
+            node_norm = vector(0, 0, 1)
+        return list(ctr_pnt), max_axis, node_norm
+
+    def _generate_tree_recursion(self, face_list):
+        if not len(face_list):
+            # nothing to do...
+            return
+        # if only one, make a face
+        if len(face_list) == 1:
+            self._add_faces(face_list)
             return None
-
-        # Get longest axis and split
-        # PCS2's bspgen functions try to keep a similar number of faces in
-        # each split, moving the split point a few times until it gets that.
-        # We might implement that later
-        d_x = max_x - min_x
-        d_y = max_y - min_y
-        d_z = max_z - min_z
-        d = [d_x, d_y, d_z]
-        if max(d) is d_x:
-            bb_min_x = min_x + (d_x / 2)
-            bb_min_y = min_y
-            bb_min_z = min_z
-            split_axis = 0
-        elif max(d) is d_y:
-            bb_min_x = min_x
-            bb_min_y = min_y + (d_y / 2)
-            bb_min_z = min_z
-            split_axis = 1
-        elif max(d) is d_z:
-            bb_min_x = min_x
-            bb_min_y = min_y
-            bb_min_z = min_z + (d_z / 2)
-            split_axis = 2
+        elif len(face_list) == 2:
+            if face_list[0].center == face_list[1].center:
+                # make a face
+                self._add_faces(face_list)
+                return
+            # we cheat and make the split based on the polys
+            ax = face_list[0].center[0]     # first face center
+            ay = face_list[0].center[1]
+            az = face_list[0].center[2]
+            bx = face_list[1].center[0]     # second face center
+            by = face_list[1].center[1]
+            bz = face_list[1].center[2]
+            max_x = max([ax, bx])           # max point
+            max_y = max([ay, by])
+            max_z = max([az, bz])
+            max_pnt = vector(max_x, max_y, max_z)
+            min_x = min([ax, bx])           # min point
+            min_y = min([ay, by])
+            min_z = min([az, bz])
+            min_pnt = vector(min_x, min_y, min_z)
+            ctr_pnt, max_axis, node_norm = self._get_split_plane(max_pnt, min_pnt)
+            front_list, back_list = self._make_split(ctr_pnt, max_axis, face_list)
+            max_pnt = False
+            min_pnt = False
         else:
-            raise VolitionError("Can't determine max axis for shield collision tree split.")
+            # get initial center point
+            max_pnt, min_pnt = self._get_bounds(face_list)
+            ctr_pnt, max_axis, node_norm = self._get_split_plane(max_pnt, min_pnt)
+            front_list, back_list = self._make_split(ctr_pnt, max_axis, face_list)
+            fnum = len(front_list)
+            bnum = len(back_list)
+            num_tries = 0
+            real_tries = 0
+            ratio = 2.0
+            while not fnum or not bnum:
+                # one of them doesn't have polys
+                # make a new split point based on the one that does
+                num_tries += 1
+                real_tries += 1     # does not get decremented
+                if real_tries > 500:
+                    # panic, just dump polys into unordered list
+                    self._add_faces(face_list)
+                    return
+                on_back = False
+                if bnum:
+                    if not on_back:     # bnum was zero, but now fnum is zero
+                        on_back = True
+                        num_tries = 1
+                        ratio *= 0.5    # we'll have to use a smaller amount
+                    bmax, bmin = self._get_bounds(back_list)
+                    ctr_pnt, max_axis, node_norm = self._get_split_plane(bmax, bmin)
+                    ctr_pnt[max_axis] += (-0.01 * ratio) * num_tries
+                    front_list, back_list = self._make_split(ctr_pnt, max_axis, back_list)
+                else:
+                    if on_back:
+                        on_back = False
+                        num_tries = 1
+                        ratio *= 0.5
+                    fmax, fmin = self._get_bounds(front_list)
+                    ctr_pnt, max_axis, node_norm = self._get_split_plane(fmax, fmin)
+                    ctr_pnt[max_axis] += (0.01 * ratio) * num_tries
+                    front_list, back_list = self._make_split(ctr_pnt, max_axis, front_list)
+                fnum = len(front_list)
+                bnum = len(back_list)
+            num_tries = 0
+            while num_tries <= 15 and (
+                fnum + bnum != len(face_list) or
+                fnum - bnum > 0.05 * (fnum + bnum) + 1 or
+                (not fnum or not bnum)
+            ):
+                num_tries += 1
+                if fnum > bnum:
+                    front = 1
+                else:
+                    front = -1
+                delta = max_pnt[max_axis] - min_pnt[max_axis]
+                # move ctr pnt towards longest list:
+                ctr_pnt[max_axis] += front * (delta / (num_tries + 1) ** 2)
+                front_list, back_list = self._make_split(ctr_pnt, max_axis, face_list)
+                fnum = len(front_list)
+                bnum = len(back_list)
 
+            # something bad happened and an empty list slipped through
+            if not fnum or not bnum:
+                self._add_faces(face_list)
+                return
+        # get actual min, max, make sortnorm
+        if not max_pnt or not min_pnt:
+            # only called if 2 faces in list
+            max_pnt, min_pnt = self._get_bounds(face_list)
+        shield_tree = self.shield_tree
         cur_node = ShieldSplit()
         cur_node.max = max_pnt
-        cur_node.min = vector(bb_min_x, bb_min_y, bb_min_z)
-        front_faces = list()
-        back_faces = list()
-        shield_verts = self.vert_list
-        front_verts = set()
-        back_verts = set()
-
-        # get all verts in front of split, put them in front_verts
-        # all verts behind split go in back_verts
-        for v in vert_list:
-            if v[0] >= bb_min_x and v[1] >= bb_min_y and v[2] >= bb_min_z:
-                front_verts.add(v)
-            else:
-                back_verts.add(v)
-
-        for f in face_list:
-            face_verts = set()
-            for v in f:
-                face_verts.add(shield_verts[v])
-            if face_verts < front_verts:        # lovely python sets
-                # if ALL the verts in face are in front_verts,
-                # face goes in front_faces, else back_faces
-                front_faces.append(f)
-            else:
-                for v in f:
-                    # check if any verts in face aren't in back_verts
-                    # and add them, if necessary
-                    back_verts.add(shield_verts[v])
-                back_faces.append(f)
-
-        self.shield_tree.append(cur_node)
+        cur_node.min = min_pnt
         cur_idx = len(shield_tree)
-        self._generate_tree_recursion(front_verts, front_faces)
-        back_offset = 37    # len of this split node
+        shield_tree.append(cur_node)
+        # recurse into front list
+        self.shield_tree = shield_tree
+        self._generate_tree_recursion(front_list)
+        # get back offset
+        back_offset = 0
         shield_tree = self.shield_tree
-        # get len of all nodes added by the recursion:
         for node in shield_tree[cur_idx:]:
             back_offset += len(node)
-        cur_node.back_offset = back_offset      # lovely python all-variables-are-references
-        self._generate_tree_recursion(back_verts, back_faces)
+        self.shield_tree[cur_idx].back_offset = back_offset
+        # recurse into back list
+        self._generate_tree_recursion(back_list)
 
     def __len__(self):
         chunk_length = 4
