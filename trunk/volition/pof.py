@@ -280,9 +280,12 @@ class Mesh:
                 edge_b = Edge(edge_b_verts)
                 edge_c = Edge(edge_c_verts)
 
-                edges.append(edge_a)
-                edges.append(edge_b)
-                edges.append(edge_c)
+                if edge_a not in edges:
+                    edges.append(edge_a)
+                if edge_b not in edges:
+                    edges.append(edge_b)
+                if edge_c not in edges:
+                    edges.append(edge_c)
 
                 faces.append(Face([edge_a, edge_b, edge_c], face_idx=i))
             self.edge_list = edges
