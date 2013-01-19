@@ -353,11 +353,11 @@ for each glowbank, g {
 uint tree_size
 for each node, n {
  ubyte type // 0 = SPLIT, 1 = LEAF/polylist
- uint size
+ uint size  // Includes type and size. For SPLIT, size=0x25
  if !type { // SPLIT
   vector bound_min
   vector bound_max
-  uint front_offset
+  uint front_offset // Always the same as size = 0x25
   uint back_offset
  }
  else { // LEAF
