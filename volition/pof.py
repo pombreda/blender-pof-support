@@ -253,7 +253,7 @@ class Mesh:
 
         return face_list
 
-    def set_face_list(self, face_list, by_edges = False):
+    def set_face_list(self, face_list, by_edges=False):
 
         faces = list()
 
@@ -270,7 +270,7 @@ class Mesh:
                 faces.append(Face([edge_a, edge_b, edge_c], face_idx=i))
         else:
             verts = self.vert_list
-            edges = list()
+            edges = set()
             for i, f in enumerate(face_list):
                 edge_a_verts = (verts[f[0]], verts[f[1]])
                 edge_b_verts = (verts[f[1]], verts[f[2]])
@@ -280,15 +280,12 @@ class Mesh:
                 edge_b = Edge(edge_b_verts)
                 edge_c = Edge(edge_c_verts)
 
-                if edge_a not in edges:
-                    edges.append(edge_a)
-                if edge_b not in edges:
-                    edges.append(edge_b)
-                if edge_c not in edges:
-                    edges.append(edge_c)
+                edges.add(edge_a)
+                edges.add(edge_b)
+                edges.add(edge_c)
 
                 faces.append(Face([edge_a, edge_b, edge_c], face_idx=i))
-            self.edge_list = edges
+            self.edge_list = list(edges)
 
         self.face_list = faces
 
@@ -429,19 +426,22 @@ class Mesh:
         faces = list(self.face_list)
         edges = list(self.edge_list)
         verts = list(self.vert_list)
+        dbg_len = len(edges)
 
         for i, f in enumerate(faces):
             fe = set()     # list of indices
             fv = set()      # set of indices
             for e in f.edges:
                 fe.add(edges.index(e))
-                fv.add(verts.index(e.verts[0]))
-                fv.add(verts.index(e.verts[1]))
+                ev = list(e.verts)  # because e.verts has to be a frozenset for Edges to be hashable
+                fv.add(verts.index(ev[0]))
+                fv.add(verts.index(ev[1]))
             fei[i] = fe
             fvi[i] = fv
 
         for i, e in enumerate(edges):
-            evi[i] = set({verts.index(e.verts[0]), verts.index(e.verts[1])})
+            ev = list(e.verts)
+            evi[i] = set({verts.index(ev[0]), verts.index(ev[1])})
             ef = set()
             for j, k in fei.items():
                 if i in k:
@@ -456,7 +456,7 @@ class Mesh:
                     ve.add(j)
             for j, k in fvi.items():
                 if i in k:
-                    ve.add(j)
+                    vf.add(j)
             vei[i] = ve
             vfi[i] = vf
 
@@ -474,16 +474,13 @@ class Vertex:
     Attributes:
         co (vector) -- The 3D coordinates of the vertex
         norms (sequence of vectors) -- The normals of the vertex"""
-    def __init__(self, loc, norms = False):
+    def __init__(self, loc, norms=False):
         self.co = tuple(loc)
         if norms:
             self.normals = list(norms)
 
     def __eq__(self, other):
-        if self.co == other.co:
-            return True
-        else:
-            return False
+        return self.co == other.co
 
     def __hash__(self):
         return hash(self.co)
@@ -508,15 +505,12 @@ class Edge:
         if not isinstance(verts[0], Vertex) or not isinstance(verts[1], Vertex) or len(verts) != 2:
             raise VertListError(verts, "Vertex list for Edge object instantiation must be sequence of two Vertex objects.")
         else:
-            self.verts = verts
+            self.verts = frozenset(verts)
             self.sharp = sharp
             self.length = sqrt((verts[1].co[0] - verts[0].co[0]) ** 2 + (verts[1].co[1] - verts[0].co[1]) ** 2 + (verts[1].co[2] - verts[0].co[2]) ** 2)
 
     def __eq__(self, other):
-        if self.verts == other.verts:
-            return True
-        else:
-            return False
+        return self.verts == other.verts
 
     def __hash__(self):
         return hash(self.verts)
@@ -604,10 +598,7 @@ class Face:
         self.radius = max(c_dist)
 
     def __eq__(self, other):
-        if self.edges == other.edges:
-            return True
-        else:
-            return False
+        return self.edges == other.edges
 
     def __hash__(self):
         return hash(self.edges)
