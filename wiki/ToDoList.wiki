@@ -2,7 +2,7 @@
 #labels Featured,Phase-Implementation
 
 ==Immediate to-do list ~Kopachris==
- * verify_pof()
+ * Fix verify_pof() so it orders chunks correctly
 
 ==Global to-do list==
  * Finish writing volition module
