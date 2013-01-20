@@ -615,24 +615,28 @@ class Face:
 
 class PolyModel:
     """Container class for a collection of POFChunks"""
+    # I want this class to contain methods for getting and
+    # setting various objects (e.g. paths) once we get classes
+    # for those objects.
     def __init__(self, chunks, pof_ver):
         self.pof_ver = pof_ver
         self.chunks = dict()
         self.submodels = dict()
         for chunk in chunks:
             if chunk.CHUNK_ID == b'OBJ2' or chunk.CHUNK_ID == b'SOBJ':
-                obj_name = chunk.name.encode()
-                self.submodels[obj_name] = chunk
+                print(chunk.model_id)
+                self.submodels[chunk.model_id] = chunk
             else:
                 # There should only be one of each type of chunk
                 # other than submodels
-                chunk_id = chunk.CHUNK_ID.encode()
+                chunk_id = chunk.CHUNK_ID.decode()
                 self.chunks[chunk_id] = chunk
 
     def get_chunk_list(self):
         chunk_list = list(self.chunks.values())
         i = 2
         for chunk in self.submodels.values():
+            print(chunk.model_id)
             chunk_list.insert(i, chunk)
             i += 1
         return chunk_list
@@ -640,6 +644,8 @@ class PolyModel:
     def verify_pof(self, pof_ver=None):
         if pof_ver is None:
             pof_ver = self.pof_ver
+        else:
+            self.pof_ver = pof_ver
         chunks = self.chunks
         submodels = self.submodels
 
@@ -677,10 +683,14 @@ class PolyModel:
                     j *= area_mass / vol_mass
 
         header.num_subobjects = len(submodels)
-        for i in header.sobj_debris:
+        sobj_debris = set(header.sobj_debris)
+        sobj_details = set(header.sobj_detail_levels)
+        if not sobj_debris.isdisjoint(sobj_details):
+            raise InvalidChunkError(header, "Set of debris submodels intersects set of LOD submodels")
+        for i in sobj_debris:
             if i >= header.num_subobjects:
                 raise InvalidChunkError(header, "Debris submodel does not exist, {}".format(i))
-        for i in header.sobj_detail_levels:
+        for i in sobj_details:
             if i >= header.num_subobjects:
                 raise InvalidChunkError(header, "Detail level submodel does not exist, {}".format(i))
 
@@ -693,26 +703,32 @@ class PolyModel:
         sobj_min_y = set()
         sobj_min_z = set()
         delta = set()
+        model_ids = set()
         for model in submodels.values():
             if pof_ver >= 2116 and model.CHUNK_ID == b'SOBJ':
                 model.CHUNK_ID = b'OBJ2'
             elif pof_ver < 2116 and model.CHUNK_ID == b'OBJ2':
                 model.CHUNK_ID = b'SOBJ'
 
+            if model.model_id in model_ids:
+                raise InvalidChunkError(model, "Duplicate model id")
+            else:
+                model_ids.add(model.model_id)
+
             if model.parent_id >= header.num_subobjects:
                 raise InvalidChunkError(model, "Model parent does not exist")
-            delta.add(model_max[0] - model.center[0])
-            delta.add(model_max[1] - model.center[1])
-            delta.add(model_max[2] - model.center[2])
-            delta.add(model.center[0] - model_min[0])
-            delta.add(model.center[1] - model_min[1])
-            delta.add(model.center[2] - model_min[2])
-            sobj_max_x.add(model_max[0])
-            sobj_max_y.add(model_max[1])
-            sobj_max_z.add(model_max[2])
-            sobj_min_x.add(model_min[0])
-            sobj_min_y.add(model_min[1])
-            sobj_min_z.add(model_min[2])
+            delta.add(model.max[0] - model.center[0])
+            delta.add(model.max[1] - model.center[1])
+            delta.add(model.max[2] - model.center[2])
+            delta.add(model.center[0] - model.min[0])
+            delta.add(model.center[1] - model.min[1])
+            delta.add(model.center[2] - model.min[2])
+            sobj_max_x.add(model.max[0])
+            sobj_max_y.add(model.max[1])
+            sobj_max_z.add(model.max[2])
+            sobj_min_x.add(model.min[0])
+            sobj_min_y.add(model.min[1])
+            sobj_min_z.add(model.min[2])
         header.max_radius = max(delta)
         max_x = max(sobj_max_x)
         max_y = max(sobj_max_y)
@@ -750,13 +766,14 @@ class PolyModel:
             path = chunks["PATH"]
             for p in path.path_parents:
                 if p not in path.path_names and p != b'':
-                    raise InvalidChunkError(path, "Path does not exist, {}".format(p))
+                    #raise InvalidChunkError(path, "Path does not exist, {}".format(p))
+                    pass
             for i, p in enumerate(path.turret_sobj_num):
                 for v in p:
                     for t in v:
-                        if t in header.sobj_debris or
+                        if (t in header.sobj_debris or
                             t in header.sobj_detail_levels or
-                            t >= header.num_subobjects:
+                            t >= header.num_subobjects):
                             raise InvalidChunkError(path, "Submodel does not exist or is not a turret, path {}".format(i))
 
         # verify gpnt/mpnt
@@ -772,25 +789,25 @@ class PolyModel:
 
         if "TGUN" in chunks:
             for j, i in enumerate(chunks["TGUN"].barrel_sobj):
-                if i > header.num_subobjects or
+                if (i > header.num_subobjects or
                     i in header.sobj_debris or
-                    i in header.sobj_detail_levels:
+                    i in header.sobj_detail_levels):
                     raise InvalidChunkError(chunks["TGUN"], "Barrel submodel does not exist or is not a turret, turret {}".format(j))
             for j, i in enumerate(chunk["TGUN"].base_sobj):
-                if i > header.num_subobjects or
+                if (i > header.num_subobjects or
                     i in header.sobj_debris or
-                    i in header.sobj_detail_levels:
+                    i in header.sobj_detail_levels):
                     raise InvalidChunkError(chunks["TGUN"], "Base submodel does not exist or is not a turret, turret {}".format(j))
         if "TMIS" in chunks:
             for j, i in enumerate(chunks["TMIS"].barrel_sobj):
-                if i > header.num_subobjects or
+                if (i > header.num_subobjects or
                     i in header.sobj_debris or
-                    i in header.sobj_detail_levels:
+                    i in header.sobj_detail_levels):
                     raise InvalidChunkError(chunks["TMIS"], "Barrel submodel does not exist or is not a turret, turret {}".format(j))
             for j, i in enumerate(chunk["TMIS"].base_sobj):
-                if i > header.num_subobjects or
+                if (i > header.num_subobjects or
                     i in header.sobj_debris or
-                    i in header.sobj_detail_levels:
+                    i in header.sobj_detail_levels):
                     raise InvalidChunkError(chunks["TMIS"], "Base submodel does not exist or is not a turret, turret {}".format(j))
 
         # verify docks
@@ -822,6 +839,15 @@ class PolyModel:
         self.chunks = chunks
         self.submodels = submodels
 
+    def get_submodel_by_name(self, name):
+        name = bytes(name, "utf-8")
+
+        for model in self.submodels.values():
+            if model.model_id == name:
+                return model
+        else:
+            return None
+
 
 class POFChunk:
     """Base class for all POF chunks.  Calling len() on a chunk will return the estimated size of the packed binary chunk, minus chunk header."""
@@ -833,7 +859,7 @@ class POFChunk:
         return 0
 
     def __repr__(self):
-        return "<POF chunk with ID {}, size {}, and POF version {}>".format(self.CHUNK_ID, len(self), self.pof_ver)
+        return "<POF chunk with ID {} and size {}>".format(self.CHUNK_ID, len(self))
 
 
 ## POF chunks and BSP blocks ##
@@ -963,8 +989,6 @@ class HeaderChunk(POFChunk):
         return chunk
 
     def __len__(self):
-        # Could cause trouble if required POF data isn't actually defined,
-        # in which case, WHY ARE YOU TRYING TO WRITE A POF FILE?!
         chunk_length = 52        # Chunk Size
         try:
             if self.sobj_detail_levels:
@@ -3021,16 +3045,14 @@ def read_pof(pof_file):
     return poly_model
 
 
-def write_pof(chunk_list, pof_version=2117):
-    """Takes a list of chunks as a required argument, returns a bytes object.  Optional argument pof_version specifies
-    the POF version (duh).  If any chunk does not use the same version as used for the file, the file might not be
-    valid and readable!"""
-
-    logging.info("Attempting to create POF file from chunk list...")
+def write_pof(polymodel, pof_version=2117):
+    polymodel.verify_pof(pof_version)
+    chunk_list = polymodel.get_chunk_list()
 
     pof_file = b"".join([b'PSPO', pack_int(pof_version)])
 
     for chunk in chunk_list:
+        print("Writing chunk {}".format(chunk.CHUNK_ID))
         pof_file += chunk.write_chunk()
 
     return pof_file

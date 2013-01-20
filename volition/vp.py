@@ -78,7 +78,9 @@ class VolitionPackageFile:
             this_file_offset = unpack_int(vp_file.read(4))
             this_file_size = unpack_int(vp_file.read(4))
             this_file_name_long = vp_file.read(32)
-            this_file_name = this_file_name_long.rstrip(b'\0')
+            this_fname_len = this_file_name_long.index(b"\0")
+            #this_file_name = this_file_name_long.rstrip(b'\0')
+            this_file_name = this_file_name_long[:this_fname_len]
             this_file_timestamp = unpack_int(vp_file.read(4))
             vp_dir_location = vp_file.tell()
 
@@ -290,7 +292,7 @@ class VolitionPackageFile:
 
 class Folder:
     def __init__(self, name, parent="", contents=None):
-        self.name = name.decode().lower()
+        self.name = name.decode(errors="ignore").lower()
         if contents is not None:
             self.contents = set(contents)
         else:
@@ -312,7 +314,10 @@ class Folder:
 
 class File:
     def __init__(self, name, contents, timestamp=False, parent=""):
-        self.name = name.decode().lower()
+        try:
+            self.name = name.decode().lower()
+        except AttributeError:
+            self.name = name
         self.contents = contents
         if timestamp:
             self.timestamp = timestamp
