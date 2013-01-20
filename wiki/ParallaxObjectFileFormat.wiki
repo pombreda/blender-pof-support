@@ -1,5 +1,5 @@
 #summary POF file format specification
-#labels Phase-Implementation
+#labels Phase-Implementation,Featured
 
 The following information is copied from the Descent Developer's Network [http://web.archive.org/web/20010619182804/descent-freespace.com/ddn/specs/pof/ pof specs page].
 
