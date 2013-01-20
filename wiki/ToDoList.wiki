@@ -1,11 +1,8 @@
 #summary Immediate to-do list--update frequently and strike off items when they have been done.
 #labels Featured,Phase-Implementation
 
-==Immediate to-do list ~Kopachris==
- * Fix duplicate verts, edges.
- * ~~Update SLDC recursion functions to match ModelChunk recursion functions~~
+==Immediate to-do list ~Kopachris==functions~~
  * verify_pof()
- * ~~fix calculate_normals() and calculate_sharp_edges()~~
 
 ==Global to-do list==
  * Finish writing volition module
