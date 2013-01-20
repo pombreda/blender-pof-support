@@ -1,7 +1,7 @@
 #summary Immediate to-do list--update frequently and strike off items when they have been done.
 #labels Featured,Phase-Implementation
 
-==Immediate to-do list ~Kopachris==functions~~
+==Immediate to-do list ~Kopachris==
  * verify_pof()
 
 ==Global to-do list==
