@@ -613,6 +613,216 @@ class Face:
 ## POF helpers ##
 
 
+class PolyModel:
+    """Container class for a collection of POFChunks"""
+    def __init__(self, chunks, pof_ver):
+        self.pof_ver = pof_ver
+        self.chunks = dict()
+        self.submodels = dict()
+        for chunk in chunks:
+            if chunk.CHUNK_ID == b'OBJ2' or chunk.CHUNK_ID == b'SOBJ':
+                obj_name = chunk.name.encode()
+                self.submodels[obj_name] = chunk
+            else:
+                # There should only be one of each type of chunk
+                # other than submodels
+                chunk_id = chunk.CHUNK_ID.encode()
+                self.chunks[chunk_id] = chunk
+
+    def get_chunk_list(self):
+        chunk_list = list(self.chunks.values())
+        i = 2
+        for chunk in self.submodels.values():
+            chunk_list.insert(i, chunk)
+            i += 1
+        return chunk_list
+
+    def verify_pof(self, pof_ver=None):
+        if pof_ver is None:
+            pof_ver = self.pof_ver
+        chunks = self.chunks
+        submodels = self.submodels
+
+        # verify header
+
+        try:
+            header = chunks["HDR2"]
+        except KeyError:
+            header = chunks["OHDR"]
+
+        if pof_ver >= 2116 and header.CHUNK_ID == b'OHDR':
+            header.CHUNK_ID = b'HDR2'
+            chunks["HDR2"] = header
+            del chunks["OHDR"]
+        elif pof_ver < 2116 and header.CHUNK_ID == b'HDR2':
+            header.CHUNK_ID = b'OHDR'
+            chunks["OHDR"] = header
+            del chunks["HDR2"]
+
+        if pof_ver >= 2009 and header.pof_ver < 2009:
+            # convert volume mass to area mass
+            vol_mass = header.mass
+            area_mass = 4.65 * (vol_mass ** 2 / 3)
+            header.mass = area_mass
+            for i in header.inertia_tensor:
+                for j in i:
+                    j *= vol_mass / area_mass
+        elif pof_ver < 2009 and header.pof_ver >= 2009:
+            # convert area mass to volume mass
+            area_mass = header.mass
+            vol_mass = abs(2 * sqrt(5 / 31) * sqrt(area_mass))
+            header.mass = vol_mass
+            for i in head.inertia_tensor:
+                for j in i:
+                    j *= area_mass / vol_mass
+
+        header.num_subobjects = len(submodels)
+        for i in header.sobj_debris:
+            if i >= header.num_subobjects:
+                raise InvalidChunkError(header, "Debris submodel does not exist, {}".format(i))
+        for i in header.sobj_detail_levels:
+            if i >= header.num_subobjects:
+                raise InvalidChunkError(header, "Detail level submodel does not exist, {}".format(i))
+
+        # verify submodels
+
+        sobj_max_x = set()
+        sobj_max_y = set()
+        sobj_max_z = set()
+        sobj_min_x = set()
+        sobj_min_y = set()
+        sobj_min_z = set()
+        delta = set()
+        for model in submodels.values():
+            if pof_ver >= 2116 and model.CHUNK_ID == b'SOBJ':
+                model.CHUNK_ID = b'OBJ2'
+            elif pof_ver < 2116 and model.CHUNK_ID == b'OBJ2':
+                model.CHUNK_ID = b'SOBJ'
+
+            if model.parent_id >= header.num_subobjects:
+                raise InvalidChunkError(model, "Model parent does not exist")
+            delta.add(model_max[0] - model.center[0])
+            delta.add(model_max[1] - model.center[1])
+            delta.add(model_max[2] - model.center[2])
+            delta.add(model.center[0] - model_min[0])
+            delta.add(model.center[1] - model_min[1])
+            delta.add(model.center[2] - model_min[2])
+            sobj_max_x.add(model_max[0])
+            sobj_max_y.add(model_max[1])
+            sobj_max_z.add(model_max[2])
+            sobj_min_x.add(model_min[0])
+            sobj_min_y.add(model_min[1])
+            sobj_min_z.add(model_min[2])
+        header.max_radius = max(delta)
+        max_x = max(sobj_max_x)
+        max_y = max(sobj_max_y)
+        max_z = max(sobj_max_z)
+        min_x = min(sobj_min_x)
+        min_y = min(sobj_min_y)
+        min_z = min(sobj_min_z)
+        header.max_bounding = vector(max_x, max_y, max_z)
+        header.min_bounding = vector(max_x, max_y, max_z)
+
+        # verify autocenter point
+
+        if "ACEN" in chunks and pof_ver < 2116:
+            del chunks["ACEN"]
+        elif "ACEN" not in chunks and pof_ver >= 2116:
+            acen = CenterChunk()
+            acen.co = vector(0,0,0)
+            chunks["ACEN"] = acen
+
+        # verify shield collision tree
+
+        if "SHLD" in chunks:
+            if "SLDC" in chunks and pof_ver < 2117:
+                del chunks["SLDC"]
+            elif "SLDC" not in chunks and pof_ver >= 2117:
+                sldc = TreeChunk()
+                sldc.make_shield_collision_tree(chunks["SHLD"])
+                chunks["SLDC"] = sldc
+        elif "SLDC" in chunks:
+            del chunks["SLDC"]
+
+        # verify paths
+
+        if "PATH" in chunks:
+            path = chunks["PATH"]
+            for p in path.path_parents:
+                if p not in path.path_names and p != b'':
+                    raise InvalidChunkError(path, "Path does not exist, {}".format(p))
+            for i, p in enumerate(path.turret_sobj_num):
+                for v in p:
+                    for t in v:
+                        if t in header.sobj_debris or
+                            t in header.sobj_detail_levels or
+                            t >= header.num_subobjects:
+                            raise InvalidChunkError(path, "Submodel does not exist or is not a turret, path {}".format(i))
+
+        # verify gpnt/mpnt
+
+        if "GPNT" in chunks:
+            if len(chunks["GPNT"].gun_points) > 3:
+                raise InvalidChunkError(chunks["GPNT"], "Primary weapons has more than three slots")
+        if "MPNT" in chunks:
+            if len(chunks["MPNT"].gun_points) > 2:
+                raise InvalidChunkError(chunks["MPNT"], "Secondary weapons has more than two slots")
+
+        # verify tgun/tmis
+
+        if "TGUN" in chunks:
+            for j, i in enumerate(chunks["TGUN"].barrel_sobj):
+                if i > header.num_subobjects or
+                    i in header.sobj_debris or
+                    i in header.sobj_detail_levels:
+                    raise InvalidChunkError(chunks["TGUN"], "Barrel submodel does not exist or is not a turret, turret {}".format(j))
+            for j, i in enumerate(chunk["TGUN"].base_sobj):
+                if i > header.num_subobjects or
+                    i in header.sobj_debris or
+                    i in header.sobj_detail_levels:
+                    raise InvalidChunkError(chunks["TGUN"], "Base submodel does not exist or is not a turret, turret {}".format(j))
+        if "TMIS" in chunks:
+            for j, i in enumerate(chunks["TMIS"].barrel_sobj):
+                if i > header.num_subobjects or
+                    i in header.sobj_debris or
+                    i in header.sobj_detail_levels:
+                    raise InvalidChunkError(chunks["TMIS"], "Barrel submodel does not exist or is not a turret, turret {}".format(j))
+            for j, i in enumerate(chunk["TMIS"].base_sobj):
+                if i > header.num_subobjects or
+                    i in header.sobj_debris or
+                    i in header.sobj_detail_levels:
+                    raise InvalidChunkError(chunks["TMIS"], "Base submodel does not exist or is not a turret, turret {}".format(j))
+
+        # verify docks
+
+        if "DOCK" in chunks:
+            for i, d in enumerate(chunks["DOCK"].path_id):
+                for p in d:
+                    if p >= len(chunks["PATH"].path_names):
+                        raise InvalidChunkError(chunks["DOCK"], "Path does not exist for dock {}".format(i))
+
+        # verify insignia
+
+        if "INSG" in chunks and pof_ver >= 2116:
+            for j, i in enumerate(chunks["INSG"].insig_detail_level):
+                if i not in header.sobj_detail_levels:
+                    raise InvalidChunkError(chunks["INSG"], "LOD submodel not found for insignia {}".format(j))
+        elif "INSG" in chunks and pof_ver < 2116:
+            del chunks["INSG"]
+
+        # verify glowpoints
+
+        if "GLOW" in chunks and pof_ver >= 2117:
+            for j, i in enumerate(chunks["GLOW"].parent_id):
+                if i >= header.num_subobjects:
+                    raise InvalidChunkError(chunks["GLOW"], "Parent submodel not found for glow bank {}".format(j))
+        if "GLOW" in chunks and pof_ver < 2117:
+            del chunks["GLOW"]
+
+        self.chunks = chunks
+        self.submodels = submodels
+
+
 class POFChunk:
     """Base class for all POF chunks.  Calling len() on a chunk will return the estimated size of the packed binary chunk, minus chunk header."""
     CHUNK_ID = b"PSPO"
@@ -1720,18 +1930,13 @@ class ModelChunk(POFChunk):
                     cur_node.norm_list.append(v.normal)
 
             face_list.append(cur_node)
+        max_pnt, min_pnt = self._get_bounds(face_list)
+        ctr_pnt = self._get_split_plane(face_list)
+        self.max = max_pnt
+        self.min = min_pnt
+        self.center = ctr_pnt[0]
         self.bsp_tree = list()
-        #print("Total faces: ", len(face_list))
-        #self._dumpeda = 0
-        #self._dumpedb = list()
-        #self._times_dumpedb = 0
-        #self._dumpedc = 0
         self._generate_tree_recursion(face_list)
-        #print("Faces dumped, condition 1: ", self._dumpeda)
-        #print("Faces dumped, condition 2: ", sum(self._dumpedb))
-        #print("Max condition 2 dump: ", max(self._dumpedb))
-        #print("Num times dumped, condition 2: ", self._times_dumpedb)
-        #print("Faces dumped, condition 3: ", self._dumpedc)
         self.bsp_tree.insert(0, self._defpoints)
         self.bsp_tree.append(EndBlock())
 
@@ -2811,7 +3016,9 @@ def read_pof(pof_file):
             logging.info("End of file.")
             break
 
-    return chunk_list
+    poly_model = PolyModel(chunk_list, file_version)
+
+    return poly_model
 
 
 def write_pof(chunk_list, pof_version=2117):
