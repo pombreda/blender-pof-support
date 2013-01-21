@@ -633,7 +633,12 @@ class PolyModel:
                 self.chunks[chunk_id] = chunk
 
     def get_chunk_list(self):
-        chunk_list = list(self.chunks.values())
+        chunk_list = [None for i in range(16)]
+        for chunk in self.chunks.keys():
+            chunk_idx = chunk_order[chunk]
+            chunk_list[chunk_idx] = self.chunks[chunk]
+        while None in chunk_list:
+            chunk_list.remove(None)
         i = 2
         for chunk in self.submodels.values():
             print(chunk.model_id)
@@ -2999,6 +3004,27 @@ chunk_dict = { # chunk or block id : chunk class
               3: TexpolyBlock,
               4: SortnormBlock,
               5: BoundboxBlock}
+
+
+chunk_order = {
+               "TXTR": 0,
+               "HDR2": 1,
+               "OHDR": 1,
+               "SPCL": 2,
+               "GPNT": 3,
+               "MPNT": 4,
+               "TGUN": 5,
+               "TMIS": 6,
+               "DOCK": 7,
+               "FUEL": 8,
+               "SHLD": 9,
+               " EYE": 10,
+               "EYE ": 10,
+               "ACEN": 11,
+               "PATH": 12,
+               "GLOW": 13,
+               "SLDC": 14,
+               "PINF": 15}
 
 
 ## Module methods ##
