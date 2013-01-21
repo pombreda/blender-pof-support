@@ -214,7 +214,7 @@ class Mesh:
 
         edges = self.edge_list
         edge_sharps = list()
-        for e in enumerate(edges):
+        for e in edges:
             edge_sharps.append(e.sharp)
 
         return edge_list, edge_sharps

@@ -29,7 +29,9 @@ http://wiki.blender.org/index.php/Scripts/Manual/Import/wavefront_obj
 import os
 import time
 import bpy
+import bmesh
 import mathutils
+from bpy_extras.io_utils import unpack_list, unpack_face_list
 from volition import pof
 
 
@@ -39,32 +41,47 @@ def create_mesh(sobj, use_smooth_groups=False, fore_is_y=True, tex_chunk=None):
     if use_smooth_groups:
         m.calculate_sharp_edges()
 
-    bm = bpy.data.meshes.new(sobj.name.decode())
+    bm = bmesh.new()
 
-    vert_list = m.get_vert_list()
-    bm.vertices.add(len(vert_list))
-    bm.vertices.foreach_set("co", vert_list)
+##    for e in m.edge_list:
+##        everts = list(e.verts)
+##        beva = bm.verts.new(everts[0].co)   # Blender Edge Vert A
+##        bevb = bm.verts.new(everts[1].co)   # Blender Edge Vert B
+##        bm.edges.new([beva, bevb])
 
-    edge_list, edge_sharps = m.get_edge_list()
-    bm.edges.add(len(edge_list))
-    bm.edges.foreach_set("vertices", edge_list)
-    if use_smooth_groups:
-        bm.edges.foreach_set("use_edge_sharp", edge_sharps)
+    for f in m.face_list:
+        bfverts = list()
+        for v in f.vert_list:
+            bfverts.append(bm.verts.new(v.co))
+        bm.faces.new(bfverts)
 
-    face_list = m.get_face_list()
-    bm.polygons.add(len(face_list))
-    bm.polygons.foreach_set("vertices", face_list)
-
-    if use_smooth_groups:
-        bm.show_edge_sharp = True
-        for f in bm.polygons:
-            f.use_smooth = True
-
-    ## TODO add support for textures, axis flipping
-
-    bm.validate()
-    bm.update()
-    bobj = bpy.data.objects.new("Mesh", bm)
+    me = bpy.data.meshes.new(sobj.name.decode())
+    bm.to_mesh(me)
+##
+##    vert_list = m.get_vert_list()
+##    bm.vertices.add(len(vert_list))
+##    bm.vertices.foreach_set("co", unpack_list(vert_list))
+##
+##    edge_list, edge_sharps = m.get_edge_list()
+##    bm.edges.add(len(edge_list))
+##    bm.edges.foreach_set("vertices", unpack_list(edge_list))
+##    if use_smooth_groups:
+##        bm.edges.foreach_set("use_edge_sharp", edge_sharps)
+##
+##    face_list = m.get_face_list()
+##    bm.polygons.add(len(face_list))
+##    bm.polygons.foreach_set("vertices", unpack_list(face_list))
+##
+##    if use_smooth_groups:
+##        bm.show_edge_sharp = True
+##        for f in bm.polygons:
+##            f.use_smooth = True
+##
+##    ## TODO add support for textures, axis flipping
+##
+    me.validate()
+    me.update()
+    bobj = bpy.data.objects.new("Mesh", me)
     if use_smooth_groups:
         bobj.modifiers.new("POF smoothing", "EDGE_SPLIT")
     return bobj
