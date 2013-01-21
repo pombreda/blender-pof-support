@@ -2,18 +2,9 @@
 #labels Featured,Phase-Implementation
 
 ==Immediate to-do list ~Kopachris==
- * Fix verify_pof() so it orders chunks correctly
+ * Start writing Blender scripts
 
 ==Global to-do list==
- * Finish writing volition module
-  * POF utilities
-   * ~~BSP tree generator~~
-   * Helper data types
-    * Mesh
-     * Vertex normals calculation
-     * Vertex normal indexing
-     * Calculate seams
-   * ~~Classes for each chunk~~
 
 ==Goals for the far distant future==
  * Calculate moment of inertia during export
