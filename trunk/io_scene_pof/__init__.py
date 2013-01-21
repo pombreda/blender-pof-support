@@ -262,5 +262,22 @@ class ImportPOF(bpy.types.Operator, ImportHelper):
 ##        layout.prop(self, "use_image_search")
 
 
-if __name__ == '__main__':
-    main()
+def menu_func_import(self, context):
+    self.layout.operator(ImportPOF.bl_idname, text="Parallax Object File (.pof)")
+
+
+def register():
+    bpy.utils.register_module(__name__)
+
+    bpy.types.INFO_MT_file_import.append(menu_func_import)
+    #bpy.types.INFO_MT_file_export.append(menu_func_export)
+
+
+def unregister():
+    bpy.utils.unregister_module(__name__)
+
+    bpy.types.INFO_MT_file_import.remove(menu_func_import)
+   # bpy.types.INFO_MT_file_export.remove(menu_func_export)
+
+if __name__ == "__main__":
+    register()
