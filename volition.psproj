@@ -11,15 +11,15 @@ ClassName=TProjectFilesNode
 
 [Project\ChildNodes\Node0\ChildNodes\Node0]
 ClassName=TProjectFolderNode
-Name=io-scene-pof
+Name=io_scene_pof
 
 [Project\ChildNodes\Node0\ChildNodes\Node0\ChildNodes\Node0]
 ClassName=TProjectFileNode
-FileName=$[Project-Path]io-scene-pof\__init__.py
+FileName=$[Project-Path]io_scene_pof\__init__.py
 
 [Project\ChildNodes\Node0\ChildNodes\Node0\ChildNodes\Node1]
 ClassName=TProjectFileNode
-FileName=$[Project-Path]io-scene-pof\import_pof.py
+FileName=$[Project-Path]io_scene_pof\import_pof.py
 
 [Project\ChildNodes\Node0\ChildNodes\Node0\ChildNodes]
 Count=2

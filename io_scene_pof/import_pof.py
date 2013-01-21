@@ -65,6 +65,8 @@ def create_mesh(sobj, use_smooth_groups=False, fore_is_y=True, tex_chunk=None):
     bm.validate()
     bm.update()
     bobj = bpy.data.objects.new("Mesh", bm)
+    if use_smooth_groups:
+        bobj.modifiers.new("POF smoothing", "EDGE_SPLIT")
     return bobj
 
 
@@ -114,7 +116,11 @@ def load(operator, context, filepath,
     else:
         pof_hdr = pof_handler.chunks["OHDR"]
 
+    scene = context.scene
+
     # We'll start with submodels...
+
+    new_objects = list()
 
     if import_only_main:
         # import only first detail level and its children
@@ -126,3 +132,11 @@ def load(operator, context, filepath,
             hull_obj = create_mesh(hull, use_smooth_groups, fore_is_y, pof_handler.chunks["TXTR"])
         else:
             hull_obj = create_mesh(hull, use_smooth_groups, fore_is_y)
+        new_objects.append(hull_obj)
+
+    for obj in new_objects:
+        scene.objects.link(obj)
+
+    scene.update()
+
+    return {'FINISHED'}
