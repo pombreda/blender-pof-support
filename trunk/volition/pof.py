@@ -210,13 +210,14 @@ class Mesh:
             except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
                 raise GeometryError(None, "Incomplete geometry - can't make index.")
 
-        edge_list = self._evi.values()
+        edge_list = list(self._evi.values())  # edge verts
 
         edges = self.edge_list
-        for i, e in enumerate(edges):
-            edge_list[i].append(e.sharp)
+        edge_sharps = list()
+        for e in enumerate(edges):
+            edge_sharps.append(e.sharp)
 
-        return edge_list
+        return edge_list, edge_sharps
 
     def set_edge_list(self, edge_list):
 

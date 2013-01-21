@@ -17,8 +17,12 @@ Name=io-scene-pof
 ClassName=TProjectFileNode
 FileName=$[Project-Path]io-scene-pof\__init__.py
 
+[Project\ChildNodes\Node0\ChildNodes\Node0\ChildNodes\Node1]
+ClassName=TProjectFileNode
+FileName=$[Project-Path]io-scene-pof\import_pof.py
+
 [Project\ChildNodes\Node0\ChildNodes\Node0\ChildNodes]
-Count=1
+Count=2
 
 [Project\ChildNodes\Node0\ChildNodes\Node1]
 ClassName=TProjectFolderNode
@@ -43,16 +47,8 @@ FileName=$[Project-Path]volition\vp.py
 [Project\ChildNodes\Node0\ChildNodes\Node1\ChildNodes]
 Count=4
 
-[Project\ChildNodes\Node0\ChildNodes\Node2]
-ClassName=TProjectFileNode
-FileName=$[Project-Path]bsp_examiner.py
-
-[Project\ChildNodes\Node0\ChildNodes\Node3]
-ClassName=TProjectFileNode
-FileName=$[Project-Path]test_pof.py
-
 [Project\ChildNodes\Node0\ChildNodes]
-Count=4
+Count=2
 
 [Project\ChildNodes\Node1]
 ClassName=TProjectRunConfiguationsNode
