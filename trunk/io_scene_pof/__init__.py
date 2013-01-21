@@ -230,8 +230,8 @@ class ImportPOF(bpy.types.Operator, ImportHelper):
 
         from . import import_pof
 
-        keywords = self.as_keywords()
-        return import_obj.load(self, context, **keywords)
+        keywords = self.as_keywords(ignore=("filter_glob",))
+        return import_pof.load(self, context, **keywords)
 
 ##    def draw(self, context):
 ##        layout = self.layout
