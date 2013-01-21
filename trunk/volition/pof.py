@@ -652,7 +652,11 @@ class PolyModel:
         else:
             self.pof_ver = pof_ver
         chunks = self.chunks
+        for chunk in chunks.values():
+            chunk.pof_ver = pof_ver
         submodels = self.submodels
+        for chunk in submodels.values():
+            chunk.pof_ver = pof_ver
 
         # verify header
 
@@ -683,7 +687,7 @@ class PolyModel:
             area_mass = header.mass
             vol_mass = abs(2 * sqrt(5 / 31) * sqrt(area_mass))
             header.mass = vol_mass
-            for i in head.inertia_tensor:
+            for i in header.inertia_tensor:
                 for j in i:
                     j *= area_mass / vol_mass
 
@@ -1728,7 +1732,8 @@ class FuelChunk(POFChunk):
                 thruster_properties = self.thruster_properties
 
             for i in range(num_thrusters):
-                chunk_length += 8 + len(thruster_properties[i])
+                if pof_ver >= 2117:
+                    chunk_length += 8 + len(thruster_properties[i])
                 num_glows = len(glow_pos[i])
                 chunk_length += 28 * num_glows
 
