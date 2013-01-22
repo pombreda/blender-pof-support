@@ -172,11 +172,11 @@ class ImportPOF(bpy.types.Operator, ImportHelper):
             description="Import special objects (subsystems).",
             default=True,
             )
-    import_special_debris = BoolProperty(
-            name="Import subsystem debris",
-            description="Import special object debris.",
-            default=True,
-            )   # If debris selected, will import these on the same layer
+##    import_special_debris = BoolProperty(
+##            name="Import subsystem debris",
+##            description="Import special object debris.",
+##            default=True,
+##            )   # If debris selected, will import these on the same layer
     fore_is_y = BoolProperty(
             name="Switch axes",
             description="If true, fore is Blender's +Y-axis.",
@@ -206,60 +206,48 @@ class ImportPOF(bpy.types.Operator, ImportHelper):
             )
 
     def execute(self, context):
-##        # print("Selected: " + context.active_object.name)
-##        from . import import_obj
-##
-##        if self.split_mode == 'OFF':
-##            self.use_split_objects = False
-##            self.use_split_groups = False
-##        else:
-##            self.use_groups_as_vgroups = False
-##
-##        keywords = self.as_keywords(ignore=("axis_forward",
-##                                            "axis_up",
-##                                            "filter_glob",
-##                                            "split_mode",
-##                                            ))
-##
-##        global_matrix = axis_conversion(from_forward=self.axis_forward,
-##                                        from_up=self.axis_up,
-##                                        ).to_4x4()
-##        keywords["global_matrix"] = global_matrix
-##
-##        return import_obj.load(self, context, **keywords)
-
         from . import import_pof
 
         keywords = self.as_keywords(ignore=("filter_glob",))
         return import_pof.load(self, context, **keywords)
 
-##    def draw(self, context):
-##        layout = self.layout
+    def draw(self, context):
+        layout = self.layout
 
-##        row = layout.row(align=True)
-##        row.prop(self, "use_ngons")
-##        row.prop(self, "use_edges")
-##
-##        layout.prop(self, "use_smooth_groups")
-##
-##        box = layout.box()
-##        row = box.row()
-##        row.prop(self, "split_mode", expand=True)
-##
-##        row = box.row()
-##        if self.split_mode == 'ON':
-##            row.label(text="Split by:")
-##            row.prop(self, "use_split_objects")
-##            row.prop(self, "use_split_groups")
-##        else:
-##            row.prop(self, "use_groups_as_vgroups")
-##
-##        row = layout.split(percentage=0.67)
-##        row.prop(self, "global_clamp_size")
-##        layout.prop(self, "axis_forward")
-##        layout.prop(self, "axis_up")
-##
-##        layout.prop(self, "use_image_search")
+        layout.prop(self, "use_smooth_groups")
+        layout.prop(self, "import_header_data")
+        layout.prop(self, "fore_is_y")
+
+        box = layout.box()
+        box.label(text="Helpers")
+        box.prop(self, "import_center_points")
+        box.prop(self, "import_bound_boxes")
+        box.prop(self, "import_eye_points")
+        box.prop(self, "import_gun_points")
+        box.prop(self, "import_mis_points")
+        box.prop(self, "import_tgun_points")
+        box.prop(self, "import_tmis_points")
+        box.prop(self, "import_thrusters")
+        box.prop(self, "import_glow_points")
+        box.prop(self, "import_special_points")
+
+        box = layout.box()
+        box.label(text="Models")
+        box.prop(self, "import_only_main")
+        if not self.import_only_main:
+            box.prop(self, "import_detail_levels")
+            box.prop(self, "import_detail_boxes")
+            box.prop(self, "import_debris")
+            box.prop(self, "import_turrets")
+            box.prop(self, "import_specials")
+        box.prop(self, "import_shields")
+
+        box = layout.box()
+        box.label(text="Textures")
+        box.prop(self, "import_textures")
+        if self.import_textures:
+            box.prop(self, "texture_path")
+        box.prop(self, "make_materials")
 
 
 def menu_func_import(self, context):

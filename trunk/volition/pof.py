@@ -1280,6 +1280,7 @@ class SpecialChunk(POFChunk):
 
 class ShieldChunk(POFChunk):
     CHUNK_ID = b'SHLD'
+    name = b"shield"    # needed for blender
     def read_chunk(self, bin_data):
         #logging.debug("Reading shield chunk...")
         num_verts = unpack_int(bin_data.read(4))
