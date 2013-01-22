@@ -2,11 +2,11 @@
 #labels Featured,Phase-Implementation
 
 ==Immediate to-do list ~Kopachris==
- * Import detail levels
+ * ~~Import detail levels~~
  * Import detail boxes
- * Import debris
- * Import turrets
- * Import subsystems
+ * ~~Import debris~~
+ * ~~Import turrets~~
+ * ~~Import subsystems~~
 
 ==Global to-do list==
 
