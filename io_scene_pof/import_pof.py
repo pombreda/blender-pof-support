@@ -35,7 +35,7 @@ from bpy_extras.io_utils import unpack_list, unpack_face_list
 from volition import pof
 
 
-def create_mesh(sobj, use_smooth_groups=False, fore_is_y=True, tex_chunk=None):
+def create_mesh(sobj, use_smooth_groups=False, tex_chunk=None):
     """Takes a submodel and adds a Blender mesh."""
     m = sobj.get_mesh()
     if use_smooth_groups:
@@ -43,45 +43,19 @@ def create_mesh(sobj, use_smooth_groups=False, fore_is_y=True, tex_chunk=None):
 
     bm = bmesh.new()
 
-##    for e in m.edge_list:
-##        everts = list(e.verts)
-##        beva = bm.verts.new(everts[0].co)   # Blender Edge Vert A
-##        bevb = bm.verts.new(everts[1].co)   # Blender Edge Vert B
-##        bm.edges.new([beva, bevb])
-
     for f in m.face_list:
         bfverts = list()
         for v in f.vert_list:
             bfverts.append(bm.verts.new(v.co))
         bm.faces.new(bfverts)
 
-    me = bpy.data.meshes.new(sobj.name.decode())
+    me = bpy.data.meshes.new("{}-mesh".format(sobj.name.decode()))
     bm.to_mesh(me)
-##
-##    vert_list = m.get_vert_list()
-##    bm.vertices.add(len(vert_list))
-##    bm.vertices.foreach_set("co", unpack_list(vert_list))
-##
-##    edge_list, edge_sharps = m.get_edge_list()
-##    bm.edges.add(len(edge_list))
-##    bm.edges.foreach_set("vertices", unpack_list(edge_list))
-##    if use_smooth_groups:
-##        bm.edges.foreach_set("use_edge_sharp", edge_sharps)
-##
-##    face_list = m.get_face_list()
-##    bm.polygons.add(len(face_list))
-##    bm.polygons.foreach_set("vertices", unpack_list(face_list))
-##
-##    if use_smooth_groups:
-##        bm.show_edge_sharp = True
-##        for f in bm.polygons:
-##            f.use_smooth = True
-##
-##    ## TODO add support for textures, axis flipping
-##
+
     me.validate()
     me.update()
     bobj = bpy.data.objects.new("Mesh", me)
+    bobj.name = sobj.name.decode()
     if use_smooth_groups:
         bobj.modifiers.new("POF smoothing", "EDGE_SPLIT")
     return bobj
@@ -133,6 +107,11 @@ def load(operator, context, filepath,
     else:
         pof_hdr = pof_handler.chunks["OHDR"]
 
+    if import_textures:
+        txtr_chunk = pof_handler.chunks["TXTR"]
+    else:
+        txtr_chunk = None
+
     scene = context.scene
 
     # We'll start with submodels...
@@ -145,11 +124,30 @@ def load(operator, context, filepath,
         # get first detail level
         hull_id = pof_hdr.sobj_detail_levels[0]
         hull = pof_handler.submodels[hull_id]
-        if import_textures:
-            hull_obj = create_mesh(hull, use_smooth_groups, fore_is_y, pof_handler.chunks["TXTR"])
-        else:
-            hull_obj = create_mesh(hull, use_smooth_groups, fore_is_y)
+        hull_obj = create_mesh(hull, use_smooth_groups, txtr_chunk)
         new_objects.append(hull_obj)
+
+        # get children
+        child_ids = dict()
+        for model in pof_handler.submodels.values():
+            if model.parent_id == hull_id:
+                child_obj = create_mesh(model, use_smooth_groups, txtr_chunk)
+                child_obj.parent = hull_obj
+                child_obj.location = model.offset
+                new_objects.append(child_obj)
+                child_ids[model.model_id] = child_obj
+
+        # get second children
+        for model in pof_handler.submodels.values():
+            if model.parent_id in child_ids:
+                child_obj = create_mesh(model, use_smooth_groups, txtr_chunk)
+                child_obj.parent = child_ids[model.parent_id]
+                x_off = pof_handler.submodels[model.parent_id].offset[0] + model.offset[0]
+                y_off = pof_handler.submodels[model.parent_id].offset[1] + model.offset[1]
+                z_off = pof_handler.submodels[model.parent_id].offset[2] + model.offset[2]
+                child_obj.location = (x_off, y_off, z_off)
+##                child_obj.location = model.offset
+                new_objects.append(child_obj)
 
     for obj in new_objects:
         scene.objects.link(obj)
