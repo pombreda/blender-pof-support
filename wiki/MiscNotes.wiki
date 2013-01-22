@@ -220,3 +220,12 @@ The external `volition` package needs to be placed in [Blender dir]/2.65/scripts
 
 ==Mesh editing==
 Since most geometry modification will be done in Blender, being able to accurately modify our Mesh objects isn't imperative right now.  In the future, though, an `update_mesh()` method would be appropriate to ensure that each edge's and face's vertex lists match vertices in the mesh's vertex list.
+
+==More Blender stuff==
+At first, the import/export scripts will have a layout based off of the .obj import/export scripts.  Eventually, though, we may want to build a dialog box with:
+{{{
+    def invoke(self, context, event):
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self)
+}}}
+and a few buttons (`layout.operator()`)to additional operators defined in the module to display data contained in the VP/POF file before any geometry is imported.  This kind of thing will be especially useful for a mission editor addon.
