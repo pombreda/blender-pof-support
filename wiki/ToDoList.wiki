@@ -2,7 +2,11 @@
 #labels Featured,Phase-Implementation
 
 ==Immediate to-do list ~Kopachris==
- * Start writing Blender scripts
+ * Import detail levels
+ * Import detail boxes
+ * Import debris
+ * Import turrets
+ * Import subsystems
 
 ==Global to-do list==
 
