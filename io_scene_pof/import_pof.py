@@ -35,7 +35,7 @@ from bpy_extras.io_utils import unpack_list, unpack_face_list
 from volition import pof
 
 
-def create_mesh(sobj, use_smooth_groups=False, tex_chunk=None):
+def create_mesh(sobj, use_smooth_groups, fore_is_y, tex_chunk):
     """Takes a submodel and adds a Blender mesh."""
     m = sobj.get_mesh()
     if use_smooth_groups:
@@ -46,7 +46,14 @@ def create_mesh(sobj, use_smooth_groups=False, tex_chunk=None):
     for f in m.face_list:
         bfverts = list()
         for v in f.vert_list:
-            bfverts.append(bm.verts.new(v.co))
+            x = v.co[0]
+            y = v.co[1]
+            z = v.co[2]
+            if fore_is_y:
+                co = (x, z, y)
+            else:
+                co = (x, y, z)
+            bfverts.append(bm.verts.new(co))
         bm.faces.new(bfverts)
 
     me = bpy.data.meshes.new("{}-mesh".format(sobj.name.decode()))
@@ -82,7 +89,7 @@ def load(operator, context, filepath,
         import_debris=True,
         import_turrets=True,
         import_specials=True,
-        import_special_debris=True,
+        #import_special_debris=True,
         fore_is_y=True,
         import_shields=True,
         import_textures=True,
@@ -114,9 +121,12 @@ def load(operator, context, filepath,
 
     scene = context.scene
 
+    cur_time = time.time()
+
     # We'll start with submodels...
 
-    new_objects = list()
+    new_objects = dict()    # dict instead of list so
+                            # we can ref by POF model id
 
     if import_only_main:
         # import only first detail level and its children
@@ -124,34 +134,144 @@ def load(operator, context, filepath,
         # get first detail level
         hull_id = pof_hdr.sobj_detail_levels[0]
         hull = pof_handler.submodels[hull_id]
-        hull_obj = create_mesh(hull, use_smooth_groups, txtr_chunk)
-        new_objects.append(hull_obj)
+        hull_obj = create_mesh(hull, use_smooth_groups, fore_is_y, txtr_chunk)
+        new_objects[hull_id] = hull_obj
 
         # get children
         child_ids = dict()
         for model in pof_handler.submodels.values():
             if model.parent_id == hull_id:
-                child_obj = create_mesh(model, use_smooth_groups, txtr_chunk)
+                child_obj = create_mesh(model, use_smooth_groups, fore_is_y, txtr_chunk)
                 child_obj.parent = hull_obj
-                child_obj.location = model.offset
-                new_objects.append(child_obj)
-                child_ids[model.model_id] = child_obj
+                if fore_is_y:
+                    off_x = model.offset[0]
+                    off_y = model.offset[1]
+                    off_z = model.offset[2]
+                    child_obj.location = (off_x, off_z, off_y)
+                else:
+                    child_obj.location = model.offset
+                new_objects[model.model_id] = child_obj
 
         # get second children
         for model in pof_handler.submodels.values():
             if model.parent_id in child_ids:
-                child_obj = create_mesh(model, use_smooth_groups, txtr_chunk)
-                child_obj.parent = child_ids[model.parent_id]
+                child_obj = create_mesh(model, use_smooth_groups, fore_is_y, txtr_chunk)
+                child_obj.parent = new_objects[model.parent_id]
                 x_off = pof_handler.submodels[model.parent_id].offset[0] + model.offset[0]
                 y_off = pof_handler.submodels[model.parent_id].offset[1] + model.offset[1]
                 z_off = pof_handler.submodels[model.parent_id].offset[2] + model.offset[2]
-                child_obj.location = (x_off, y_off, z_off)
-##                child_obj.location = model.offset
-                new_objects.append(child_obj)
+                if fore_is_y:
+                    child_obj.location = (x_off, z_off, y_off)
+                else:
+                    child_obj.location = (x_off, y_off, z_off)
+                new_objects[model.model_id] = child_obj
 
-    for obj in new_objects:
+    else:
+        layer_count = 0
+        debris_layer = None
+        main_detail = None
+
+        if import_detail_levels:
+            for i in pof_hdr.sobj_detail_levels:
+                model = pof_handler.submodels[i]
+                this_obj = create_mesh(model, use_smooth_groups, fore_is_y, txtr_chunk)
+                # put LODs on sep layers from each other
+                this_obj.layers[0] = False
+                this_obj.layers[layer_count] = True
+                layer_count += 1
+                new_objects[model.model_id] = this_obj
+            main_detail = new_objects[0]
+
+        if import_debris:
+            for i in pof_hdr.sobj_debris:
+                model = pof_handler.submodels[i]
+                this_obj = create_mesh(model, use_smooth_groups, fore_is_y, txtr_chunk)
+                # put debris on sep layer from LODs, but same as each other
+                this_obj.layers[0] = False
+                this_obj.layers[layer_count] = True
+                new_objects[model.model_id] = this_obj
+                debris_layer = layer_count
+            layer_count += 1
+
+        if import_turrets:
+            if "TGUN" in pof_handler.chunks:
+                tchunk = pof_handler.chunks["TGUN"]
+                for i in range(len(tchunk.base_sobj)):
+                    model = pof_handler.submodels[tchunk.base_sobj[i]]
+                    this_obj = create_mesh(model, use_smooth_groups, fore_is_y, txtr_chunk)
+                    if main_detail is not None:
+                        this_obj.parent = main_detail
+                    off_x = model.offset[0]
+                    off_y = model.offset[1]
+                    off_z = model.offset[2]
+                    if fore_is_y:
+                        this_obj.location = (off_x, off_z, off_y)
+                    else:
+                        this_obj.location = (off_x, off_y, off_z)
+
+                    if tchunk.barrel_sobj[i] > -1:
+                        bar_model = pof_handler.submodels[tchunk.barrel_sobj[i]]
+                        barrel_obj = create_mesh(bar_model, use_smooth_groups, fore_is_y, txtr_chunk)
+                        barrel_obj.parent = this_obj
+                        off_x += model.offset[0]
+                        off_y += model.offset[1]
+                        off_z += model.offset[2]
+                        if fore_is_y:
+                            barrel_obj.location = (off_x, off_z, off_y)
+                        else:
+                            barrel_obj.location = (off_x, off_y, off_z)
+                        new_objects[bar_model.model_id] = barrel_obj
+                    new_objects[model.model_id] = this_obj
+
+            if "TMIS" in pof_handler.chunks:
+                tchunk = pof_handler.chunks["TMIS"]
+                for i in range(len(tchunk.base_sobj)):
+                    model = pof_handler.submodels[tchunk.base_sobj[i]]
+                    this_obj = create_mesh(model, use_smooth_groups, fore_is_y, txtr_chunk)
+                    if main_detail is not None:
+                        this_obj.parent = main_detail
+                    off_x = model.offset[0]
+                    off_y = model.offset[1]
+                    off_z = model.offset[2]
+                    if fore_is_y:
+                        this_obj.location = (off_x, off_z, off_y)
+                    else:
+                        this_obj.location = (off_x, off_y, off_z)
+
+                    if tchunk.barrel_sobj[i] > -1:
+                        bar_model = pof_handler.submodels[tchunk.barrel_sobj[i]]
+                        barrel_obj = create_mesh(bar_model, use_smooth_groups, fore_is_y, txtr_chunk)
+                        barrel_obj.parent = this_obj
+                        off_x += model.offset[0]
+                        off_y += model.offset[1]
+                        off_z += model.offset[2]
+                        if fore_is_y:
+                            barrel_obj.location = (off_x, off_z, off_y)
+                        else:
+                            barrel_obj.location = (off_x, off_y, off_z)
+                        new_objects[bar_model.model_id] = barrel_obj
+                    new_objects[model.model_id] = this_obj
+
+        if import_specials:
+            for model in pof_handler.submodels.values():
+                if b"subsystem" in model.properties:
+                    this_obj = create_mesh(model, use_smooth_groups, fore_is_y, txtr_chunk)
+                    this_obj.parent = new_objects[model.parent_id]
+                    new_objects[model.model_id] = this_object
+
+    if import_shields and "SHLD" in pof_handler.chunks:
+        model = pof_handler.chunks["SHLD"]
+        this_obj = create_mesh(model, False, fore_is_y, None)
+        this_obj.draw_type = "WIRE"
+        new_objects["shield"] = this_obj
+
+    # done
+
+    for obj in new_objects.values():
         scene.objects.link(obj)
 
     scene.update()
+    new_time = time.time()
+    print("\ttime to add objects {}".format(new_time - cur_time))
 
     return {'FINISHED'}
