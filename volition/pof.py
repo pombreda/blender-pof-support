@@ -23,23 +23,6 @@
 
 ## No guarantees about pep8 compliance
 
-## TO DO LIST:
-
-## Helpers
-# Mesh
-    # calculate edge_list from face_list
-    # calculate vert_list from edge_list
-## Chunks
-# SubmodelChunk
-    # get_mesh()
-    # set_mesh(mesh)
-    # make_bsp_tree()
-## POF and BSP functions
-# validate_pof()
-# make_defpoints()
-# make_polylist()
-# generate_tree_recursion()
-
 
 from math import fsum, sqrt
 from .bintools import *
