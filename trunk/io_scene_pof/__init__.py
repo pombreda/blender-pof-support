@@ -199,7 +199,14 @@ class ImportPOF(bpy.types.Operator, ImportHelper):
             default="../maps/",
             subtype="FILE_PATH",
             )
-    make_materials = BoolProperty(
+    texture_format = EnumProperty(
+            name="Texture format",
+            items=(('.dds', "*.dds", "DirectDraw Surface"),
+                   ('.png', "*.png", "Portable Network Graphics"),
+                   ('.tga', "*.tga", "Targa"),
+                   ('.jpg', "*.jpg", "Joint Photographic Experts Group")),
+            default='.dds')
+    pretty_materials = BoolProperty(
             name="Make materials",
             description="Make Blender materials from normal, shine, glow maps if possible.",
             default=False,
@@ -247,7 +254,7 @@ class ImportPOF(bpy.types.Operator, ImportHelper):
         box.prop(self, "import_textures")
         if self.import_textures:
             box.prop(self, "texture_path")
-        box.prop(self, "make_materials")
+        box.prop(self, "pretty_materials")
 
 
 def menu_func_import(self, context):

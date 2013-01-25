@@ -22,7 +22,7 @@ This script imports Volition POF files to Blender.
 Usage:
 Run this script from "File->Import" menu and then load the desired POF file.
 
-http://wiki.blender.org/index.php/Scripts/Manual/Import/wavefront_obj
+http://code.google.com/p/blender-pof-support/wiki/ImportScript
 """
 
 
@@ -35,7 +35,7 @@ from bpy_extras.io_utils import unpack_list, unpack_face_list
 from volition import pof
 
 
-def create_mesh(sobj, use_smooth_groups, fore_is_y, tex_chunk):
+def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
     """Takes a submodel and adds a Blender mesh."""
     m = sobj.get_mesh()
     if use_smooth_groups:
@@ -54,7 +54,9 @@ def create_mesh(sobj, use_smooth_groups, fore_is_y, tex_chunk):
             else:
                 co = (x, y, z)
             bfverts.append(bm.verts.new(co))
-        bm.faces.new(bfverts)
+        bface = bm.faces.new(bfverts)
+##        if import_textures:
+##            bface.material_index = f.color
 
     me = bpy.data.meshes.new("{}-mesh".format(sobj.name.decode()))
     bm.to_mesh(me)
@@ -94,7 +96,8 @@ def load(operator, context, filepath,
         import_shields=True,
         import_textures=True,
         texture_path="../maps/",
-        make_materials=False
+        texture_format=".dds",
+        pretty_materials=False
         ):
     print("\tloading POF file {}...".format(filepath))
     filepath = os.fsencode(filepath)
@@ -114,16 +117,65 @@ def load(operator, context, filepath,
     else:
         pof_hdr = pof_handler.chunks["OHDR"]
 
-    if import_textures:
-        txtr_chunk = pof_handler.chunks["TXTR"]
-    else:
-        txtr_chunk = None
-
     scene = context.scene
 
     cur_time = time.time()
 
-    # We'll start with submodels...
+    # Textures first
+
+        # we'll do this by making a material for every texture
+        # if we're importing pretty textures, we'll make a
+        # Blender texture each for shine, normal, glow, etc.
+
+        # we'll keep the materials in a list and link every material
+        # to every submodel object.  That way, we can assign
+        # material indices that are the same as the POF texture indices
+
+    if not os.path.isdir(texture_path):
+        print("Given texture path is not a valid directory.")
+        import_textures = False
+
+    if import_textures:
+        txtr_chunk = pof_handler.chunks["TXTR"]
+        # go through txtr_chunk, make Blender images for each
+        # if pretty_textures: get shine, normal, glow, etc., too
+        missing_textures = 0
+        bmats = list()
+        bimgs = list()
+        if pretty_materials:
+            shine_imgs = list()
+            normal_imgs = list()
+            glow_imgs = list()
+        for tex in txtr_chunk.textures:
+            tex_name = tex.decode()
+            tex_path = os.path.join(texture_path, tex_name + texture_format)
+            if os.path.isfile(tex_path):
+                bimgs.append(bpy.data.images.load(tex_path))
+            else:
+                print("Missing texture {}".format(tex_name))
+                missing_textures += 1
+            if pretty_materials:
+                shine_name = tex_name + "-shine" + texture_format
+                norm_name = tex_name + "-normal" + texture_format
+                glow_name = tex_name + "-glow" + texture_format
+                shine_path = os.path.join(texture_path, shine_name)
+                norm_path = os.path.join(texture_path, norm_name)
+                glow_path = os.path.join(texture_path, glow_name)
+                if os.path.isfile(shine_path):
+                    shine_imgs.append(bpy.data.images.load(shine_path))
+                else:
+                    missing_textures += 1
+                if os.path.isfile(norm_path):
+                    normal_imgs.append(bpy.data.images.load(norm_path))
+                else:
+                    missing_textures += 1
+                if os.path.isfile(glow_path):
+                    glow_imgs.append(bpy.data.images.load(glow_path))
+                else:
+                    missing_textures += 1
+        print("Total missing textures: {}".format(missing_textures))
+
+    # Now submodels
 
     new_objects = dict()    # dict instead of list so
                             # we can ref by POF model id
@@ -134,14 +186,14 @@ def load(operator, context, filepath,
         # get first detail level
         hull_id = pof_hdr.sobj_detail_levels[0]
         hull = pof_handler.submodels[hull_id]
-        hull_obj = create_mesh(hull, use_smooth_groups, fore_is_y, txtr_chunk)
+        hull_obj = create_mesh(hull, use_smooth_groups, fore_is_y, import_textures)
         new_objects[hull_id] = hull_obj
 
         # get children
         child_ids = dict()
         for model in pof_handler.submodels.values():
             if model.parent_id == hull_id:
-                child_obj = create_mesh(model, use_smooth_groups, fore_is_y, txtr_chunk)
+                child_obj = create_mesh(model, use_smooth_groups, fore_is_y, import_textures)
                 child_obj.parent = hull_obj
                 if fore_is_y:
                     off_x = model.offset[0]
@@ -155,7 +207,7 @@ def load(operator, context, filepath,
         # get second children
         for model in pof_handler.submodels.values():
             if model.parent_id in child_ids:
-                child_obj = create_mesh(model, use_smooth_groups, fore_is_y, txtr_chunk)
+                child_obj = create_mesh(model, use_smooth_groups, fore_is_y, import_textures)
                 child_obj.parent = new_objects[model.parent_id]
                 x_off = pof_handler.submodels[model.parent_id].offset[0] + model.offset[0]
                 y_off = pof_handler.submodels[model.parent_id].offset[1] + model.offset[1]
@@ -174,7 +226,7 @@ def load(operator, context, filepath,
         if import_detail_levels:
             for i in pof_hdr.sobj_detail_levels:
                 model = pof_handler.submodels[i]
-                this_obj = create_mesh(model, use_smooth_groups, fore_is_y, txtr_chunk)
+                this_obj = create_mesh(model, use_smooth_groups, fore_is_y, import_textures)
                 # put LODs on sep layers from each other
                 this_obj.layers[0] = False
                 this_obj.layers[layer_count] = True
@@ -185,7 +237,7 @@ def load(operator, context, filepath,
         if import_debris:
             for i in pof_hdr.sobj_debris:
                 model = pof_handler.submodels[i]
-                this_obj = create_mesh(model, use_smooth_groups, fore_is_y, txtr_chunk)
+                this_obj = create_mesh(model, use_smooth_groups, fore_is_y, import_textures)
                 # put debris on sep layer from LODs, but same as each other
                 this_obj.layers[0] = False
                 this_obj.layers[layer_count] = True
@@ -198,7 +250,7 @@ def load(operator, context, filepath,
                 tchunk = pof_handler.chunks["TGUN"]
                 for i in range(len(tchunk.base_sobj)):
                     model = pof_handler.submodels[tchunk.base_sobj[i]]
-                    this_obj = create_mesh(model, use_smooth_groups, fore_is_y, txtr_chunk)
+                    this_obj = create_mesh(model, use_smooth_groups, fore_is_y, import_textures)
                     if main_detail is not None:
                         this_obj.parent = main_detail
                     off_x = model.offset[0]
@@ -211,7 +263,7 @@ def load(operator, context, filepath,
 
                     if tchunk.barrel_sobj[i] > -1:
                         bar_model = pof_handler.submodels[tchunk.barrel_sobj[i]]
-                        barrel_obj = create_mesh(bar_model, use_smooth_groups, fore_is_y, txtr_chunk)
+                        barrel_obj = create_mesh(bar_model, use_smooth_groups, fore_is_y, import_textures)
                         barrel_obj.parent = this_obj
                         off_x += model.offset[0]
                         off_y += model.offset[1]
@@ -227,7 +279,7 @@ def load(operator, context, filepath,
                 tchunk = pof_handler.chunks["TMIS"]
                 for i in range(len(tchunk.base_sobj)):
                     model = pof_handler.submodels[tchunk.base_sobj[i]]
-                    this_obj = create_mesh(model, use_smooth_groups, fore_is_y, txtr_chunk)
+                    this_obj = create_mesh(model, use_smooth_groups, fore_is_y, import_textures)
                     if main_detail is not None:
                         this_obj.parent = main_detail
                     off_x = model.offset[0]
@@ -240,7 +292,7 @@ def load(operator, context, filepath,
 
                     if tchunk.barrel_sobj[i] > -1:
                         bar_model = pof_handler.submodels[tchunk.barrel_sobj[i]]
-                        barrel_obj = create_mesh(bar_model, use_smooth_groups, fore_is_y, txtr_chunk)
+                        barrel_obj = create_mesh(bar_model, use_smooth_groups, fore_is_y, import_textures)
                         barrel_obj.parent = this_obj
                         off_x += model.offset[0]
                         off_y += model.offset[1]
@@ -255,7 +307,7 @@ def load(operator, context, filepath,
         if import_specials:
             for model in pof_handler.submodels.values():
                 if b"subsystem" in model.properties:
-                    this_obj = create_mesh(model, use_smooth_groups, fore_is_y, txtr_chunk)
+                    this_obj = create_mesh(model, use_smooth_groups, fore_is_y, import_textures)
                     this_obj.parent = new_objects[model.parent_id]
                     new_objects[model.model_id] = this_object
 
