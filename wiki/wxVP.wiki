@@ -1,3 +1,0 @@
-#summary wxPython VP viewer/editor
-
-wxVP is a cross-platform VP viewer and editor.  It will feature an interface similar to VPView, tabs for working on multiple VP files at once, and will support both extracting files from and adding files to VPs.
