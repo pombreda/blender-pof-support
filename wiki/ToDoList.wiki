@@ -2,11 +2,9 @@
 #labels Featured,Phase-Implementation
 
 ==Immediate to-do list ~Kopachris==
- * ~~Import detail levels~~
- * Import detail boxes
- * ~~Import debris~~
- * ~~Import turrets~~
- * ~~Import subsystems~~
+ * Rewrite get_mesh() and set_mesh() functions to use indexed vert/face lists.
+ * Rewrite import module to use a dialog box
+ * Rewrite import module to use `bpy.types.MeshTessFace`s
 
 ==Global to-do list==
 
