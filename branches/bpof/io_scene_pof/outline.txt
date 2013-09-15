@@ -1,0 +1,73 @@
+Import options
+================
+
+bool from_vp			# Import from a VP file; select the VP file instead of the POF file.
+	if true: str pof_file_name		# The path to the POF file within the VP, e.g. /data/models/ast01.pof
+	
+## Helpers
+bool smooth_groups		# Attempt to import smooth groups?  It's probably not very good at it...
+bool center_points		# Import overall center, model centers, and autocenter point as empties
+bool bound_boxes		# Import overall and model boudning boxes as wireframe cubes
+bool eye_points			# Import eye points as empties
+bool paths				# Import paths as empties
+bool gun_points			# Import gun points as empties
+bool mis_points			# Import missile points as empties
+bool t_gun_points		# Import gun turret points as empties
+bool t_mis_points		# Import missile turret points as empties
+bool thruster_points	# Import thruster points as empties
+bool glow_points		# Import glowpoints as empties
+bool flash_points		# Import muzzleflash points as empties
+bool special_points		# Import special points as empties
+bool header_data		# Import header data (e.g. moment of inertia, mass) as scene custom properties
+
+## Models
+bool only_main			# Only import highest detail level and its children
+	if false:
+		bool detail_levels		# Import detail level objects and their children (on separate layers)
+		bool detail_boxes		# Import detail box objects
+		bool debris				# Import debris objects
+		bool turrets			# Import turrets
+		bool special			# Import special objects
+		bool special_debris		# Import special object debris
+bool fore_is_y			# Switch axes so forward is Blender's +Y-axis
+bool shields			# Import shield mesh as wireframe
+
+## Textures
+bool txtr				# Import texture and UV data
+	if true: str texture_dir		# Disk folder or VP file to find textures in
+bool make_materials		# Make Blender materials from shine, normal, glow maps
+
+Import layout:
+================
+
+use_smooth_groups
+import_header_data
+fore_is_y
+
+label "Helpers"
+import_center_points
+import_bound_boxes
+import_eye_points
+import_gun_points
+import_mis_points
+import_tgun_points
+import_tmis_points
+import_thrusters
+import_glow_points
+import_special_points
+
+label "Models"
+import_only_main
+if not import_only_main:
+	import_detail_levels
+	import_detail_boxes
+	import_debris
+	import_turrets
+	import_specials
+import_shields
+
+label "Textures"
+import_textures
+if import_textures:
+	texture_path
+make_materials

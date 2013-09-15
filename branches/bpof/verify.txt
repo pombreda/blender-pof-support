@@ -1,0 +1,49 @@
+OHDR/HDR2:
+chunk id
+max radius
+num subobjects
+min bound/max bound
+num details + num debris + num turrets < num subobjects
+
+TXTR:
+
+PATH:
+each parent name is in path names
+turret sobj nums is in turrets
+all properties have appropriate length
+
+SPCL:
+
+SHLD:
+
+EYE:
+
+GPNT, MPNT:
+max 2 slots for MPNT and 3 slots for GPNT
+
+TGUN, TMIS:
+sobj_parent, sobj_parent_phys < total sobjs and is not in details or debris
+
+DOCK:
+paths in PATH
+
+FUEL:
+
+SOBJ/OBJ2:
+chunk id
+parent < total sobjs
+
+INSG:
+ver>=2116 only
+detail levels in detail levels
+
+ACEN:
+ver>=2116 only
+
+GLOW:
+ver>=2117 only
+obj parent < total sobjs
+"$glow_texture" in properties
+
+SLDC:
+ver>=2117 only
