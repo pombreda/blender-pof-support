@@ -94,9 +94,33 @@ def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
     return bobj
 
 
-def load(operator, context, filepath, use_smooth_groups=False, **kwargs):
-    # doing this evil thing because I hate having a million keyword arguments
-    locals().update(kwargs)     # praise satan
+def load(operator, context, filepath,
+        use_smooth_groups=False,
+        import_eye_points=True,
+        import_paths=True,
+        import_gun_points=True,
+        import_mis_points=True,
+        import_tgun_points=True,
+        import_tmis_points=True,
+        import_thrusters=True,
+        import_glow_points=True,
+        #import_flash_points=True,
+        import_special_points=True,
+        import_header_data=True,
+        import_only_main=False,
+        import_detail_levels=True,
+        import_detail_boxes=True,
+        import_debris=True,
+        import_turrets=True,
+        import_specials=True,
+        #import_special_debris=True,
+        fore_is_y=True,
+        import_shields=True,
+        import_textures=False,
+        texture_path="../maps/",
+        texture_format=".dds",
+        pretty_materials=False
+        ):
     
     print("\tloading POF file {}...".format(filepath))
     filepath = os.fsencode(filepath)

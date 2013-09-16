@@ -60,32 +60,12 @@ class ImportPOF(bpy.types.Operator, ImportHelper):
             default="*.pof",
             options={'HIDDEN'},
             )
-
-##    from_vp = BoolProperty(
-##            name="Import from VP",
-##            description="Import from a VP file - select a VP instead of a POF.",
-##            default=False,
-##            )
-##    pof_name = StringProperty(
-##            name="POF name",
-##            description="Path to the file within the VP.",
-##            )
     use_smooth_groups = BoolProperty(
             name="Import smooth groups",
             description="Try to make smoothgroups using EdgeSplit modifier.",
             default=False,
             )   # Probably not very good at it
     # Helpers:
-#     import_center_points = BoolProperty(
-#             name="Import center points",
-#             description="Import center points as empties.",
-#             default=False,
-#             )   # Centers are calculated automatically during export
-#     import_bound_boxes = BoolProperty(
-#             name="Import bounding boxes",
-#             description="Import bounding boxes.",
-#             default=False,
-#             )   # Bounding boxes are calculated automatically during export
     import_eye_points = BoolProperty(
             name="Import viewpoints",
             description="Import eye points as empties.",
@@ -191,7 +171,7 @@ class ImportPOF(bpy.types.Operator, ImportHelper):
     import_textures = BoolProperty(
             name="Import textures",
             description="Import textures and UV data.",
-            default=True,
+            default=False,
             )
     texture_path = StringProperty(
             name="Texture path",
@@ -227,8 +207,6 @@ class ImportPOF(bpy.types.Operator, ImportHelper):
 
         box = layout.box()
         box.label(text="Helpers")
-        #box.prop(self, "import_center_points")
-        #box.prop(self, "import_bound_boxes")
         box.prop(self, "import_eye_points")
         box.prop(self, "import_gun_points")
         box.prop(self, "import_mis_points")

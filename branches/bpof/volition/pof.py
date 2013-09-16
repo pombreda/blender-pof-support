@@ -314,12 +314,12 @@ class Mesh:
         vei = self._vei
 
         if not fei or not fvi or not evi or not efi or not vfi or not vei:
-            #try:
-                #self._make_index()
-            #except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
-                #raise GeometryError(None, "Incomplete geometry - can't make index.")
+            try:
+                self._make_index()
+            except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
+                raise GeometryError(None, "Incomplete geometry - can't make index.")
 
-            self._make_index()
+            #self._make_index()
 
         # We're calculating edge sharpness by checking vertex norms
         # against the face norm. Sharp is True by default, but
@@ -534,7 +534,7 @@ class Face:
         # add FaceVert objects to Face
         for e in edge_list:
             for v in e.verts:
-                vert_list.add(FaceVert(v.co))
+                vert_list.add(FaceVert(v))
         if len(vert_list) != 3:
             raise GeometryError(vert_list, "This module only accepts triangular faces.")
         for i, v in enumerate(vert_list):
