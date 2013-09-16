@@ -170,13 +170,16 @@ class Mesh:
             self._vfi = False
             self._vei = False
 
-    def get_vert_list(self):
+    def get_vert_list(self, fore_is_y=False):
         """Returns a list of vertex coordinates."""
 
         vert_list = list()
         verts = self.vert_list
         for v in verts:
-            vert_list.append(v.co)
+            if fore_is_y:
+                vert_list.append((v.co[0], v.co[2], v.co[1]))
+            else:
+                vert_list.append(v.co)
 
         return vert_list
 
@@ -506,7 +509,8 @@ class Edge:
         if not isinstance(verts[0], Vertex) or not isinstance(verts[1], Vertex) or len(verts) != 2:
             raise VertListError(verts, "Vertex list for Edge object instantiation must be sequence of two Vertex objects.")
         else:
-            self.verts = frozenset(verts)
+            v = verts[0].co, verts[1].co
+            self.verts = frozenset(v)
             self.sharp = sharp
             self.length = sqrt((verts[1].co[0] - verts[0].co[0]) ** 2 + (verts[1].co[1] - verts[0].co[1]) ** 2 + (verts[1].co[2] - verts[0].co[2]) ** 2)
 
@@ -1918,7 +1922,9 @@ class ModelChunk(POFChunk):
         return m
 
     def set_mesh(self, m):
-        """Creates a BSP tree as a list of blocks"""
+        """Creates a BSP tree as a list of blocks.
+        
+        May take a few minutes, depending on size of the model, so get some coffee."""
         # Basically:
         # defpoints = DefpointsBlock()
         # defpoints.set_mesh(m)

@@ -57,7 +57,7 @@ class ImportPOF(bpy.types.Operator, ImportHelper):
 
     filename_ext = ".pof"
     filter_glob = StringProperty(
-            default="*.pof;*.vp",
+            default="*.pof",
             options={'HIDDEN'},
             )
 
@@ -76,16 +76,16 @@ class ImportPOF(bpy.types.Operator, ImportHelper):
             default=False,
             )   # Probably not very good at it
     # Helpers:
-    import_center_points = BoolProperty(
-            name="Import center points",
-            description="Import center points as empties.",
-            default=False,
-            )   # Centers are calculated automatically during export
-    import_bound_boxes = BoolProperty(
-            name="Import bounding boxes",
-            description="Import bounding boxes.",
-            default=False,
-            )   # Bounding boxes are calculated automatically during export
+#     import_center_points = BoolProperty(
+#             name="Import center points",
+#             description="Import center points as empties.",
+#             default=False,
+#             )   # Centers are calculated automatically during export
+#     import_bound_boxes = BoolProperty(
+#             name="Import bounding boxes",
+#             description="Import bounding boxes.",
+#             default=False,
+#             )   # Bounding boxes are calculated automatically during export
     import_eye_points = BoolProperty(
             name="Import viewpoints",
             description="Import eye points as empties.",
@@ -227,8 +227,8 @@ class ImportPOF(bpy.types.Operator, ImportHelper):
 
         box = layout.box()
         box.label(text="Helpers")
-        box.prop(self, "import_center_points")
-        box.prop(self, "import_bound_boxes")
+        #box.prop(self, "import_center_points")
+        #box.prop(self, "import_bound_boxes")
         box.prop(self, "import_eye_points")
         box.prop(self, "import_gun_points")
         box.prop(self, "import_mis_points")

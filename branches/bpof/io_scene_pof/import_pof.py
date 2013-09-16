@@ -59,29 +59,45 @@ def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
     me = bpy.data.meshes.new("{}-mesh".format(sobj.name.decode()))
 ##    bm.to_mesh(me)
 
-    vert_list = m.get_vert_list()
-    edge_list, edge_sharps = m.get_edge_list()
+    vert_list = m.get_vert_list(fore_is_y)
+    edge_list = m.edge_list
     face_list = m.get_face_list[0]
-    me.from_pydata(vert_list, edge_list, face_list)
+    me.from_pydata(vert_list, [], face_list)
 
     me.validate()
-    me.update()
+    me.update(calc_edges=True)
+    
+    # thought:
+    # can we index edges in a dict by a frozenset of the vert coords?
+    # that way we don't have to worry about messed up indicies when
+    # adding the seams for smoothgroups
+    if use_smooth_groups:
+        edge_dict = dict()
+        for e in edge_list:
+            edge_dict[e.verts] = e.sharp
+        for e in me.edges:
+            v1 = me.vertices[e.vertices[0]].co
+            v2 = me.vertices[e.vertices[1]].co
+            e.use_edge_sharp = edge_dict[frozenset([v1, v2])]
 
     if import_textures:
-        uvlayer = me.uv_layers.new()
-        uvlayer = uvlayer.data
+        uvlayer = me.tessface_uv_textures.new('uv').data
+        # uvlayer.foreach_set('image', faces.texture_id_list)
+        # uvlayer.foreach_set('uv', faces.uv_coords_list)
         # TODO actually import the UV wrapping
 
     bobj = bpy.data.objects.new("Mesh", me)
     bobj.name = sobj.name.decode()
     if use_smooth_groups:
         bobj.modifiers.new("POF smoothing", "EDGE_SPLIT")
+        
     return bobj
 
 
-def load(operator, context, filepath, **kwargs):
+def load(operator, context, filepath, use_smooth_groups=False, **kwargs):
     # doing this evil thing because I hate having a million keyword arguments
     locals().update(kwargs)     # praise satan
+    
     print("\tloading POF file {}...".format(filepath))
     filepath = os.fsencode(filepath)
     cur_time = time.time()
@@ -158,7 +174,7 @@ def load(operator, context, filepath, **kwargs):
                     missing_textures += 1
         print("Total missing textures: {}".format(missing_textures))
 
-        # Create a material for each texture listed in the chunk
+        # TODO Create a material for each texture listed in the chunk
         # Each object has its own UV layer with the base texture
         # In addition to the UV layer, the material must have a
         # texture slot with the image, set to UV coordinates
@@ -308,6 +324,10 @@ def load(operator, context, filepath, **kwargs):
         this_obj = create_mesh(model, False, fore_is_y, None)
         this_obj.draw_type = "WIRE"
         new_objects["shield"] = this_obj
+        
+    # TODO import helpers
+    
+    # helper = bpy.ops.object.empty_add(type='PLAIN_AXES', location=(0.0, 0.0, 0.0), rotation=(0.0, 0.0, 0.0))
 
     # done
 
