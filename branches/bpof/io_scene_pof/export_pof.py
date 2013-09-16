@@ -50,6 +50,7 @@ def create_mesh(bm, use_smooth_groups, fore_is_y):
 
     face_list = list()
     for f in bm.polygons:
+        # user must make sure mesh is triangulated
         f_verta = vert_list[f.vertices[0]]
         f_vertb = vert_list[f.vertices[1]]
         f_vertc = vert_list[f.vertices[2]]

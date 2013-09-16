@@ -70,6 +70,7 @@ def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
     if import_textures:
         uvlayer = me.uv_layers.new()
         uvlayer = uvlayer.data
+        # TODO actually import the UV wrapping
 
     bobj = bpy.data.objects.new("Mesh", me)
     bobj.name = sobj.name.decode()
@@ -78,35 +79,9 @@ def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
     return bobj
 
 
-def load(operator, context, filepath,
-        use_smooth_groups=False,
-        import_center_points=False,
-        import_bound_boxes=False,
-        import_eye_points=True,
-        import_paths=True,
-        import_gun_points=True,
-        import_mis_points=True,
-        import_tgun_points=True,
-        import_tmis_points=True,
-        import_thrusters=True,
-        import_glow_points=True,
-        #import_flash_points=True,
-        import_special_points=True,
-        import_header_data=True,
-        import_only_main=False,
-        import_detail_levels=True,
-        import_detail_boxes=True,
-        import_debris=True,
-        import_turrets=True,
-        import_specials=True,
-        #import_special_debris=True,
-        fore_is_y=True,
-        import_shields=True,
-        import_textures=True,
-        texture_path="../maps/",
-        texture_format=".dds",
-        pretty_materials=False
-        ):
+def load(operator, context, filepath, **kwargs):
+    # doing this evil thing because I hate having a million keyword arguments
+    locals().update(kwargs)     # praise satan
     print("\tloading POF file {}...".format(filepath))
     filepath = os.fsencode(filepath)
     cur_time = time.time()
