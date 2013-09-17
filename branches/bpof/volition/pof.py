@@ -136,6 +136,19 @@ def vector(x = None, y = None, z = None):
         return (float(x), float(y), float(z))
 
 
+def vdist(a, b):
+    """
+    Get 3d distance between two vectors
+    """
+    x1 = a[0]
+    x2 = b[0]
+    y1 = a[1]
+    y2 = b[1]
+    z1 = a[2]
+    z2 = b[2]
+    return sqrt((x1 - x2)**2 + (y1 - y2)**2 + (z1 - z2)**2)
+
+
 class Mesh:
     """
     A collection of lists
@@ -148,502 +161,53 @@ class Mesh:
         vertex coords and where each value is bool, whether the edge is sharp (import only) (calc)
     fradii - a list of face radii (export only) (calc)
     centers - a list of face centers (export only) (assigned)
+    tex_ids - a list of texture ids (assigned) == material id in Blender
 
     When using the edge split modifier in Blender, you basically get duplicate vertices,
     each with its own normal.  During export, we should determine if a vertex is already
     in the vertex list, and if it is, use its index instead of adding a new one.
     """
-    def calc_sharp(self):
+    def calc_sharp(self, num_norms):
         """
         Calculate edges from face and normal lists
 
         Use during import
         """
+        # Let's do this the easy way, sharp if edge includes vert with >1 norm
+        # for each face
+            # for each pair of verts in face
+                # make a frozenset of the verts coords
+                # for each vert in pair
+                    # if vert has >1 norm
+                        # edge is sharp
+                    # else
+                        # edge is not sharp
         pass
 
     def calc_fradii(self):
         """
         Calculate fradii
+        
+        Use during export
         """
-        pass
-
-class Mesh2:
-    """A Mesh object.
-
-    Attributes:
-        vert_list - a sequence of Vertex Objects
-        edge_list - a sequence of Edge Objects
-        face_list - a sequence of Face Objects
-
-    Methods:
-        get_vert_list() - parses self.vert_list and returns a list of vertex coordinates
-        set_vert_list(vert_list, vert_norms = False) - parses a list of vertex coordinates and, optionally, a list of vertex normals to self.vert_list
-        get_edge_list() - parses self.edge_list and returns a list in the format [[u0, v0, s0], [u1, v1, s1], ...], where ui and vi are indexed into self.vert_list and si is the boolean seam value
-        set_edge_list(edge_list) - parses a list in the same format as returned by get_edge_list() to self.edge_list
-        get_face_list(by_edges = False) - parses self.face_list and returns a list in the format [[vert_idx], [face_norms]] or, if by_edges is True, [[edge_idx], [face_norms]]
-        set_face_list(face_list, vert_norms = False, by_edges = False) - parses a list of faces where each face is either a vert index or an edge index
-        calculate_normals() - calculates vertex normals for all the objects in vert_list, edge_list, and face_list
-        get_vert_normals(format = "vertex") - returns a list of vertex normals indexed to the mesh's vert list or, optionally, the edge list's or face list's vertex lists
-    """
-    def __init__(self, vert_list=False, edge_list=False, face_list=False):
-        ## TO DO: if face_list and not vert_list and not edge_list, make vert_list and edge_list
-        self.vert_list = vert_list
-        self.edge_list = edge_list
-        self.face_list = face_list
-
-        try:
-            self._make_index()
-        except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
-            self._fei = False
-            self._fvi = False
-            self._evi = False
-            self._efi = False
-            self._vfi = False
-            self._vei = False
-
-    def get_vert_list(self, fore_is_y=False):
-        """Returns a list of vertex coordinates."""
-
-        vert_list = list()
-        verts = self.vert_list
-        for v in verts:
-            if fore_is_y:
-                vert_list.append((v.co[0], v.co[2], v.co[1]))
-            else:
-                vert_list.append(v.co)
-
-        return vert_list
-
-    def set_vert_list(self, vert_list, vert_norms = False):
-        """Takes a list of vertex coordinates and creates a set of Vertex objects."""
-
-        verts = list()
-        if vert_norms:
-            for v, n in zip(vert_list, vert_norms):
-                verts.append(Vertex(v, n))
-        else:
-            for v in vert_list:
-                verts.append(Vertex(v))
-        self.vert_list = verts
-
-        try:
-            self._make_index()
-        except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
-            self._fei = False
-            self._fvi = False
-            self._evi = False
-            self._efi = False
-            self._vfi = False
-            self._vei = False
-
-    def get_edge_list(self):
-
-        if not self._evi:
-            try:
-                self._make_index()
-            except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
-                raise GeometryError(None, "Incomplete geometry - can't make index.")
-
-        edge_list = list(self._evi.values())  # edge verts
-
-        edges = self.edge_list
-        edge_sharps = list()
-        for e in edges:
-            edge_sharps.append(e.sharp)
-
-        return edge_list, edge_sharps
-
-    def set_edge_list(self, edge_list):
-
-        edges = list()
-        for e in edge_list:
-            edges.append(Edge(e[:2], e[2]))
-
-        try:
-            self._make_index()
-        except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
-            self._fei = False
-            self._fvi = False
-            self._evi = False
-            self._efi = False
-            self._vfi = False
-            self._vei = False
-
-    def get_face_list(self, by_edges = False):
-
-        if not self._fei or not self._fvi:
-            #try:
-            self._make_index()
-            #except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
-                #raise GeometryError(None, "Incomplete geometry - can't make index.")
-
-        if by_edges:
-            face_list = [list(self._fei.values()), []]
-        else:
-            face_list = [list(self._fvi.values()), []]
-
-        faces = self.face_list
+        # where a, b, c are the length of each edge:
+        # r = abc / sqrt(2aabb + 2bbcc + 2ccaa - a**4 - b**4 - c**4)
+        faces = self.faces
+        verts = self.verts
+        fradii = list()
         for f in faces:
-            face_list[1].append(f.normal)
-
-        return face_list
-
-    def set_face_list(self, face_list, by_edges=False):
-
-        faces = list()
-
-        # We want to support both by_edges and !by_edges
-        # because the face list will be by edges when
-        # exporting, but by verts when importing.
-
-        if by_edges:
-            edges = list(self.edge_list)
-            for i, f in enumerate(face_list):
-                edge_a = edges[f[0]]
-                edge_b = edges[f[1]]
-                edge_c = edges[f[2]]
-                faces.append(Face([edge_a, edge_b, edge_c], face_idx=i))
-        else:
-            verts = self.vert_list
-            edges = set()
-            for i, f in enumerate(face_list):
-                edge_a_verts = (verts[f[0]], verts[f[1]])
-                edge_b_verts = (verts[f[1]], verts[f[2]])
-                edge_c_verts = (verts[f[2]], verts[f[0]])
-
-                edge_a = Edge(edge_a_verts)
-                edge_b = Edge(edge_b_verts)
-                edge_c = Edge(edge_c_verts)
-
-                edges.add(edge_a)
-                edges.add(edge_b)
-                edges.add(edge_c)
-
-                faces.append(Face([edge_a, edge_b, edge_c], face_idx=i))
-            self.edge_list = list(edges)
-
-        self.face_list = faces
-
-        try:
-            self._make_index()
-        except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
-            self._fei = False
-            self._fvi = False
-            self._evi = False
-            self._efi = False
-            self._vfi = False
-            self._vei = False
-
-    def calculate_sharp_edges(self):
-        fei = self._fei
-        fvi = self._fvi
-
-        evi = self._evi
-        efi = self._efi
-
-        vfi = self._vfi
-        vei = self._vei
-
-        if not fei or not fvi or not evi or not efi or not vfi or not vei:
-            try:
-                self._make_index()
-            except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
-                raise GeometryError(None, "Incomplete geometry - can't make index.")
-
-            #self._make_index()
-
-        # We're calculating edge sharpness by checking vertex norms
-        # against the face norm. Sharp is True by default, but
-        # if any vert norm is off from the face norm, it's False
-
-        face_list = self.face_list
-        edge_list = self.edge_list
-        vert_list = self.vert_list
-        for i, e in enumerate(edge_list):
-            sharp = True
-            verts = evi[i]
-            for f in efi[i]:
-                for v in face_list[f].vert_list:
-                    if v.index in verts:
-                        this_normal = vert_list[v.index].normals[v.normal]
-                        face_normal = face_list[f].normal
-                        for t, f in zip(this_normal, face_normal):
-                            if not (f - 0.1) < t < (f + 0.1):
-                                sharp = False
-                                break
-                    if not sharp:
-                        break   # for vert in face
-                if not sharp:
-                    break       # for face in edge
-            e.sharp = sharp
-        self.edge_list = edge_list
-
-    def calculate_normals(self):
-
-        # This should be called during export, where we have sharp values
-        # This should not be called during import, where we already have vertex normals
-
-        fei = self._fei        # face edge index
-        fvi = self._fvi        # face vert index
-
-        evi = self._evi        # edge vert index
-        efi = self._efi        # edge face index
-
-        vfi = self._vfi        # vert face index
-        vei = self._vei        # vert edge index
-
-        if not fei or not fvi or not evi or not efi or not vfi or not vei:
-            #try:
-                #self._make_index()
-            #except (AttributeError, IndexError, KeyError, NameError, TypeError, ValueError):
-                #raise GeometryError(None, "Incomplete geometry - can't make index.")
-            self._make_index()
-
-        faces = self.face_list
-        edges = self.edge_list
-        verts = self.vert_list
-
-        for v, el in vei.items():
-            smooth_norm_x = 0
-            smooth_norm_y = 0
-            smooth_norm_z = 0
-
-            num_smooth_norms = 0
-
-            this_vert_norms = set()
-
-            for e in el:
-                if edges[e].sharp:
-                    for f in efi[e]:
-                        smooth_norm_x += faces[f].normal[0]
-                        smooth_norm_y += faces[f].normal[1]
-                        smooth_norm_z += faces[f].normal[2]
-                        num_smooth_norms += 1
-                else:
-                    for f in efi[e]:
-                        this_vert_norms.add(faces[f].normal)
-
-            if num_smooth_norms:    # average face normals to get vertex normal
-                smooth_norm_x /= num_smooth_norms
-                smooth_norm_y /= num_smooth_norms
-                smooth_norm_z /= num_smooth_norms
-                this_vert_norms.add(vector(smooth_norm_x, smooth_norm_y, smooth_norm_z))
-
-            verts[v].normals = list(this_vert_norms)
-
-        # assign vert norm index to faces
-        # if you can figure out how to do this without
-        # so many nested loops, feel free to implement it
-
-        for v, fl in vfi.items():
-            for f in fl:
-                cur_vert_idx = fvi[f].index(v)
-                for e in fei[f]:
-                    if edges[e].sharp:
-                        faces[f].vert_list[cur_vert_idx].normal = verts[v].normals.index(faces[f].normal)
-                    else:
-                        faces[f].vert_list[cur_vert_idx].normal = len(verts[v].normals) - 1
-
-        self.vert_list = verts
-        self.face_list = faces
-        self.edge_list = edges
-
-    def _make_index(self):
-        fei = dict()        # face edge index
-        fvi = dict()        # face vert index
-
-        evi = dict()        # edge vert index
-        efi = dict()        # edge face index
-
-        vfi = dict()        # vert face index
-        vei = dict()        # vert edge index
-
-        faces = list(self.face_list)
-        edges = list(self.edge_list)
-        verts = list(self.vert_list)
-        dbg_len = len(edges)
-
-        for i, f in enumerate(faces):
-            fe = set()     # list of indices
-            fv = set()      # set of indices
-            for e in f.edges:
-                fe.add(edges.index(e))
-                ev = list(e.verts)  # because e.verts has to be a frozenset for Edges to be hashable
-                fv.add(verts.index(ev[0]))
-                fv.add(verts.index(ev[1]))
-            fei[i] = fe
-            fvi[i] = fv
-
-        for i, e in enumerate(edges):
-            ev = list(e.verts)
-            evi[i] = set({verts.index(ev[0]), verts.index(ev[1])})
-            ef = set()
-            for j, k in fei.items():
-                if i in k:
-                    ef.add(j)
-            efi[i] = ef
-
-        for i in range(len(verts)):
-            ve = set()
-            vf = set()
-            for j, k in evi.items():
-                if i in k:
-                    ve.add(j)
-            for j, k in fvi.items():
-                if i in k:
-                    vf.add(j)
-            vei[i] = ve
-            vfi[i] = vf
-
-        self._fei = fei
-        self._fvi = fvi
-        self._evi = evi
-        self._efi = efi
-        self._vfi = vfi
-        self._vei = vei
-
-
-class Vertex:
-    """A Vertex object.
-
-    Attributes:
-        co (vector) -- The 3D coordinates of the vertex
-        norms (sequence of vectors) -- The normals of the vertex"""
-    def __init__(self, loc, norms=False):
-        self.co = tuple(loc)
-        if norms:
-            self.normals = list(norms)
-
-    def __eq__(self, other):
-        return self.co == other.co
-
-    def __hash__(self):
-        return hash(self.co)
-
-    def __repr__(self):
-        return "<pof.Vertex object with coords {}>".format(self.co)
-
-    def __str__(self):
-        return str(self.co)
-
-
-class FaceVert(Vertex):
-    def __init__(self, co):
-        self.co = co
-        self.index = None
-        self.normal = None
-        self.uv = None
-
-
-class Edge:
-    def __init__(self, verts, sharp = True):
-        if not isinstance(verts[0], Vertex) or not isinstance(verts[1], Vertex) or len(verts) != 2:
-            raise VertListError(verts, "Vertex list for Edge object instantiation must be sequence of two Vertex objects.")
-        else:
-            v = verts[0].co, verts[1].co
-            self.verts = frozenset(v)
-            self.sharp = sharp
-            self.length = sqrt((verts[1].co[0] - verts[0].co[0]) ** 2 + (verts[1].co[1] - verts[0].co[1]) ** 2 + (verts[1].co[2] - verts[0].co[2]) ** 2)
-
-    def __eq__(self, other):
-        return self.verts == other.verts
-
-    def __hash__(self):
-        return hash(self.verts)
-
-    def __repr__(self):
-        return "<pof.Edge object with vertices {}>".format(str(self.verts))
-
-    def __str__(self):
-        return str(self.verts)
-
-
-class Face:
-    def __init__(self, edge_list, face_idx=False, vert_idx=False, color=False, textured=False, uv=False, vert_norms=False):
-        vert_list = set()
-        self.face_idx = face_idx    # an index in some face list
-        # add FaceVert objects to Face
-        for e in edge_list:
-            for v in e.verts:
-                vert_list.add(FaceVert(v))
-        if len(vert_list) != 3:
-            raise GeometryError(vert_list, "This module only accepts triangular faces.")
-        for i, v in enumerate(vert_list):
-            # v.index is the index of the vert in some vert list
-            # v.uv are the vert's uv coords
-            # v.normal is the index of the vert's normal in some_vert_list[v.index].normals
-            if vert_idx:
-                v.index = vert_idx[i]
-            if uv:
-                v.uv = uv[i]
-            if vert_norms:
-                v.normal = vert_norms[i]
-        self.textured = textured    # bool, whether the face is textured
-        self.color = color          # (r, g, b) if textured is False
-                                    # texture ID if textured is True
-
-        # Everything OK, can assign the edge list now
-        self.edges = frozenset(edge_list)
-
-        # Calculate, in order, centroid, normal, and radius
-##        verts_x = list()
-##        verts_y = list()
-##        verts_z = list()
-##        vert_list = set()
-##        for e in edge_list:
-##            if e.verts[0] not in vert_list:
-##                vert_list.add(e.verts[0])
-##                verts_x.append(e.verts[0].co[0])
-##                verts_y.append(e.verts[0].co[1])
-##                verts_z.append(e.verts[0].co[2])
-##            if e.verts[1] not in vert_list:
-##                vert_list.add(e.verts[1])
-##                verts_x.append(e.verts[1].co[0])
-##                verts_y.append(e.verts[1].co[1])
-##                verts_z.append(e.verts[1].co[2])
-
-        verts_x = list()
-        verts_y = list()
-        verts_z = list()
-        for v in vert_list:
-            verts_x.append(v.co[0])
-            verts_y.append(v.co[1])
-            verts_z.append(v.co[2])
-
-        self.vert_list = vert_list
-
-        # This assumes polygon is a triangle
-        center_x = 1/3 * fsum(verts_x)
-        center_y = 1/3 * fsum(verts_y)
-        center_z = 1/3 * fsum(verts_z)
-        self.center = vector(center_x, center_y, center_z)
-
-        normal_x = 0.0
-        normal_y = 0.0
-        normal_z = 0.0
-        num_verts = len(vert_list)
-        for i in range(num_verts):
-            normal_x += (verts_y[i] - verts_y[(i + 1) % num_verts]) * (verts_z[i] - verts_z[(i + 1) % num_verts])
-            normal_y += (verts_z[i] - verts_z[(i + 1) % num_verts]) * (verts_x[i] - verts_x[(i + 1) % num_verts])
-            normal_z += (verts_x[i] - verts_x[(i + 1) % num_verts]) * (verts_y[i] - verts_y[(i + 1) % num_verts])
-        self.normal = vector(normal_x, normal_y, normal_z)
-
-        c_dist = list()
-        for i in range(num_verts):
-            c_dist.append(sqrt((self.center[0] - verts_x[i]) ** 2 + (self.center[1] - verts_y[i]) ** 2 + (self.center[2] - verts_z[i]) ** 2))
-        self.radius = max(c_dist)
-
-    def __eq__(self, other):
-        return self.edges == other.edges
-
-    def __hash__(self):
-        return hash(self.edges)
-
-    def __repr__(self):
-        return "<pof.Face object with edges {}>".format(str(self.edges))
-
-    def __str__(self):
-        return str(self.edges)
+            a = vdist(verts[f[0]], verts[f[1]])
+            b = vdist(verts[f[1]], verts[f[2]])
+            c = vdist(verts[f[2]], verts[f[0]])
+            a2 = a**2
+            b2 = b**2
+            c2 = c**2
+            a4 = a**4
+            b4 = b**4
+            c4 = c**4
+            num = a * b * c
+            denom = sqrt(2 * a2 * b2 + 2 * b2 * c2 + 2 * c2 * a2 - a4 - b4 - c4)
+            fradii.append(num/denom)
 
 
 ## POF helpers ##
@@ -1378,39 +942,38 @@ class ShieldChunk(POFChunk):
         """Returns a mesh object created from the chunk data."""
 
         shld_mesh = Mesh()
-        shld_mesh.set_vert_list(self.vert_list)
-        shld_mesh.set_face_list(self.face_list)
+        shld_mesh.verts = self.vert_list
+        shld_mesh.faces = self.face_list
         return shld_mesh
 
     def set_mesh(self, m):
         """Creates chunk data from a mesh object."""
 
-        self.num_verts = len(m.vert_list)
-        self.vert_list = m.get_vert_list()
+        self.num_verts = len(m.verts)
+        self.vert_list = m.verts
 
-        self.num_faces = len(m.face_list)
-        faces = m.get_face_list()
-        self.face_list = faces[0]
-        self.face_normals = faces[1]
-
-        efi = m._efi
-        fei = m._fei
-
-        # I know it looks like a big, ugly, nested loop, but remember that:
-        # shield meshes only have 80 faces (length of fei)
-        # faces only have 3 edges (length of f1)
-        # and edges can only be used by 2 faces (length of efi[e])
-        # that makes only 480 iterations,
-        # so this takes almost no time at all
+        self.num_faces = len(m.faces)
+        face_list = m.faces
+        self.face_normals = m.fnorms
+        
+        # for getting neighbors, we could:
+        # for each face
+            # for each pair of verts
+                # for each face
+                    # if pair of verts in face, add neighbor
 
         face_neighbors = list()
-        for i, f1 in fei.items():
+        for i, f in enumerate(face_list):
             face_neighbors.append(list())
-            for e in f1:
-                for f2 in efi[e]:
-                    if f2 != i:
-                        face_neighbors[i].append(f2)
+            e1 = {f[0], f[1]}
+            e2 = {f[1], f[2]}
+            e3 = {f[2], f[0]}
+            for j, n in enumerate(face_list):
+                v = set(n)
+                if e1 < v or e2 < v or e3 < v:
+                    face_neighbors[i].append(j)
 
+        self.face_list = face_list
         self.face_neighbors = face_neighbors
 
     def __len__(self):
@@ -1901,52 +1464,30 @@ class ModelChunk(POFChunk):
                 # get vert list from defpoints
                 # should only happen once per model
                 vert_list = node.vert_list
-                vert_norms = node.vert_norms
+                #vert_norms = node.vert_norms
             elif node.CHUNK_ID == 2 or node.CHUNK_ID == 3:
                 raw_faces.append(node)
 
         m = Mesh()
-        m.set_vert_list(vert_list, vert_norms)
+        m.verts = vert_list
         # until I figure something out for Mesh, we have
         # to make our own Face list and Edge list
-        vert_list = list(m.vert_list)
-        num_verts = len(vert_list)
-        edge_list = set()
-        face_list = set()
-
-        for node in raw_faces:
-            edgea_verts = vert_list[node.vert_list[0]], vert_list[node.vert_list[1]]
-            edgeb_verts = vert_list[node.vert_list[1]], vert_list[node.vert_list[2]]
-            edgec_verts = vert_list[node.vert_list[2]], vert_list[node.vert_list[0]]
-            edgea = Edge(edgea_verts)
-            edgeb = Edge(edgeb_verts)
-            edgec = Edge(edgec_verts)
-            edge_list.add(edgea)
-            edge_list.add(edgeb)
-            edge_list.add(edgec)
-
-            if node.CHUNK_ID == 2:
-                # Flatpoly
-                f = Face([edgea, edgeb, edgec],
-                        vert_idx=node.vert_list,
-                        color=node.color,
-                        vert_norms=node.norm_list)
-                face_list.add(f)
-            elif node.CHUNK_ID == 3:
-                # Texpoly
-                uv = list()
-                for u, v in zip(node.u, node.v):
-                    uv.append([u, v])
-                f = Face([edgea, edgeb, edgec],
-                        vert_idx=node.vert_list,
-                        color=node.texture_id,
-                        textured=True,
-                        uv=uv,
-                        vert_norms=node.norm_list)
-                face_list.add(f)
-
-        m.edge_list = edge_list
-        m.face_list = face_list
+        #vert_list = list(m.vert_list)
+        face_list = list()
+        u = list()
+        v = list()
+        vert_norms = list()
+        for node in raw_face:
+            face_list.append(node.vert_list)
+            vert_norms.append(node.norm_list)
+            # in practice, all polies will be textured
+            # FLATPOLY blocks were only used in Descent
+            u.append(node.u)
+            v.append(node.v)
+        m.faces = face_list
+        m.vnorms = vert_norms
+        m.u = u
+        m.v = v
 
         # m.calculate_sharp_edges()
 
@@ -1964,6 +1505,9 @@ class ModelChunk(POFChunk):
         # self._polylist = polylist
         # self._generate_tree_recursion()
         # self.bsp_tree = self._defpoints + self._polylist
+        
+        m.calc_fradii()
+        
         defpoints = DefpointsBlock()
         defpoints.set_mesh(m)
         self._defpoints = defpoints
@@ -1971,36 +1515,16 @@ class ModelChunk(POFChunk):
         # make initial polylist
         face_list = list()
         #vert_list = m.get_vert_list()
-        for f in m.face_list:
-            if f.textured:
-                ## TODO move this stuff to methods in the respective classes
-                cur_node = TexpolyBlock()
-                cur_node.normal = f.normal
-                cur_node.center = f.center
-                cur_node.radius = f.radius
-                cur_node.texture_id = f.color
-                cur_node.vert_list = list()
-                cur_node.norm_list = list()
-                cur_node.u = list()
-                cur_node.v = list()
-
-                for v in f.vert_list:
-                    cur_node.vert_list.append(v.index)
-                    cur_node.norm_list.append(v.normal)
-                    cur_node.u.append(v.uv[0])
-                    cur_node.v.append(v.uv[1])
-            else:
-                cur_node = FlatpolyBlock()
-                cur_node.normal = f.normal
-                cur_node.center = f.center
-                cur_node.radius = f.radius
-                cur_node.color = f.color
-                cur_node.vert_list = list()
-                cur_node.norm_list = list()
-
-                for v in f.vert_list:
-                    cur_node.vert_list.append(v.index)
-                    cur_node.norm_list.append(v.normal)
+        for i, f in enumerate(m.face_list):
+            cur_node = TexpolyBlock()
+            cur_node.normal = m.fnorms[i]
+            cur_node.center = m.centers[i]
+            cur_node.radius = m.fradii[i]
+            cur_node.texture_id = m.tex_ids[i]
+            cur_node.vert_list = f
+            cur_node.norm_list = m.vnorms[i]
+            cur_node.u = m.u[i]
+            cur_node.v = m.v[i]
 
             face_list.append(cur_node)
         max_pnt, min_pnt = self._get_bounds(face_list)
@@ -2828,18 +2352,13 @@ class DefpointsBlock(POFChunk):
     def get_mesh(self, m=False):
         if not m:
             m = Mesh()
-        m.set_vert_list(self.vert_list, self.vert_norms)
+        m.verts = self.vert_list
 
         return m
 
     def set_mesh(self, m):
-        vert_list = m.get_vert_list()
-        vert_norms = list()
-        for v in m.vert_list:
-            vert_norms.append(v.normals)
-
-        self.vert_list = vert_list
-        self.vert_norms = vert_norms
+        self.vert_list = m.verts
+        self.vert_norms = m.vnorms
 
     def __len__(self):
         chunk_length = 20
