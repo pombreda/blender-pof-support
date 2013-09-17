@@ -137,6 +137,37 @@ def vector(x = None, y = None, z = None):
 
 
 class Mesh:
+    """
+    A collection of lists
+    
+    verts - a list of vectors representing vertex coords (assigned)
+    faces - a list of 3-tuples representing vertex indices (assigned)
+    fnorms - a list of 3-tuples representing face normals (export only)
+    vnorms - a list of 3-tuples of vectors representing vertex normals (assigned)
+    edges - a dict where each key is a frozenset of two vectors representing
+        vertex coords and where each value is bool, whether the edge is sharp (import only) (calc)
+    fradii - a list of face radii (export only) (calc)
+    centers - a list of face centers (export only) (assigned)
+
+    When using the edge split modifier in Blender, you basically get duplicate vertices,
+    each with its own normal.  During export, we should determine if a vertex is already
+    in the vertex list, and if it is, use its index instead of adding a new one.
+    """
+    def calc_sharp(self):
+        """
+        Calculate edges from face and normal lists
+
+        Use during import
+        """
+        pass
+
+    def calc_fradii(self):
+        """
+        Calculate fradii
+        """
+        pass
+
+class Mesh2:
     """A Mesh object.
 
     Attributes:
