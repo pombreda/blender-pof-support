@@ -38,8 +38,6 @@ from volition import pof
 def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
     """Takes a submodel and adds a Blender mesh."""
     m = sobj.get_mesh()
-    if use_smooth_groups:
-        m.calculate_sharp_edges()
 
 ##    bm = bmesh.new()
 ##
@@ -59,9 +57,8 @@ def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
     me = bpy.data.meshes.new("{}-mesh".format(sobj.name.decode()))
 ##    bm.to_mesh(me)
 
-    vert_list = m.get_vert_list(fore_is_y)
-    edge_list = m.edge_list
-    face_list = m.get_face_list[0]
+    vert_list = m.verts
+    face_list = m.faces
     me.from_pydata(vert_list, [], face_list)
 
     me.validate()
@@ -70,15 +67,15 @@ def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
     # thought:
     # can we index edges in a dict by a frozenset of the vert coords?
     # that way we don't have to worry about messed up indicies when
-    # adding the seams for smoothgroups
+    # adding the seams for smoothgroups (an edge might be [v1, v2] or [v2, v1])
     if use_smooth_groups:
-        edge_dict = dict()
-        for e in edge_list:
-            edge_dict[e.verts] = e.sharp
+        m.calc_sharp()
         for e in me.edges:
-            v1 = me.vertices[e.vertices[0]].co
-            v2 = me.vertices[e.vertices[1]].co
-            e.use_edge_sharp = edge_dict[frozenset([v1, v2])]
+            v1 = tuple(me.vertices[e.vertices[0]].co)
+            v2 = tuple(me.vertices[e.vertices[1]].co)
+            this_edge = (v1, v2)
+            this_edge = frozenset(this_edge)
+            e.use_edge_sharp = m.edges[this_edge]
 
     if import_textures:
         uvlayer = me.tessface_uv_textures.new('uv').data
@@ -341,11 +338,11 @@ def load(operator, context, filepath,
                 if b"subsystem" in model.properties:
                     this_obj = create_mesh(model, use_smooth_groups, fore_is_y, import_textures)
                     this_obj.parent = new_objects[model.parent_id]
-                    new_objects[model.model_id] = this_object
+                    new_objects[model.model_id] = this_obj
 
     if import_shields and "SHLD" in pof_handler.chunks:
         model = pof_handler.chunks["SHLD"]
-        this_obj = create_mesh(model, False, fore_is_y, None)
+        this_obj = create_mesh(model, False, fore_is_y, False)
         this_obj.draw_type = "WIRE"
         new_objects["shield"] = this_obj
         

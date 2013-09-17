@@ -167,7 +167,7 @@ class Mesh:
     each with its own normal.  During export, we should determine if a vertex is already
     in the vertex list, and if it is, use its index instead of adding a new one.
     """
-    def calc_sharp(self, num_norms):
+    def calc_sharp(self):
         """
         Calculate edges from face and normal lists
 
@@ -182,7 +182,46 @@ class Mesh:
                         # edge is sharp
                     # else
                         # edge is not sharp
-        pass
+        faces = self.faces
+        verts = self.verts
+        num_norms = self.num_norms
+        edges = dict()
+        for f in faces:
+            e1 = verts[f[0]], verts[f[1]]
+            e2 = verts[f[1]], verts[f[2]]
+            e3 = verts[f[2]], verts[f[0]]
+            e1 = frozenset(e1)
+            e2 = frozenset(e2)
+            e3 = frozenset(e3)
+            if num_norms[f[0]] == 1:
+                # if this edge is already accounted for,
+                # either it will already be False or True
+                # takes priority
+                if e1 not in edges.keys():
+                    edges[e1] = False
+                if e3 not in edges.keys():
+                    edges[e3] = False
+            else:
+                edges[e1] = True
+                edges[e2] = True
+            if num_norms[f[1]] == 1:
+                if e1 not in edges.keys():
+                    edges[e1] = False
+                if e2 not in edges.keys():
+                    edges[e2] = False
+            else:
+                edges[e1] = True
+                edges[e2] = True
+            if num_norms[f[2]] == 1:
+                if e2 not in edges.keys():
+                    edges[e2] = False
+                if e3 not in edges.keys():
+                    edges[e3] = False
+            else:
+                edges[e2] = True
+                edges[e3] = True
+
+        self.edges = edges
 
     def calc_fradii(self):
         """
@@ -1464,12 +1503,14 @@ class ModelChunk(POFChunk):
                 # get vert list from defpoints
                 # should only happen once per model
                 vert_list = node.vert_list
+                num_norms = node.norm_counts
                 #vert_norms = node.vert_norms
             elif node.CHUNK_ID == 2 or node.CHUNK_ID == 3:
                 raw_faces.append(node)
 
         m = Mesh()
         m.verts = vert_list
+        m.num_norms = num_norms
         # until I figure something out for Mesh, we have
         # to make our own Face list and Edge list
         #vert_list = list(m.vert_list)
@@ -1477,7 +1518,7 @@ class ModelChunk(POFChunk):
         u = list()
         v = list()
         vert_norms = list()
-        for node in raw_face:
+        for node in raw_faces:
             face_list.append(node.vert_list)
             vert_norms.append(node.norm_list)
             # in practice, all polies will be textured
@@ -2291,6 +2332,8 @@ class DefpointsBlock(POFChunk):
         for i in range(num_verts):
             norm_counts.append(unpack_byte(bin_data.read(1)))
 
+        self.norm_counts = norm_counts
+
         #logging.debug("Norm counts \n{}".format(norm_counts))
 
         if bin_data.tell() != vert_data_offset - 8:
@@ -2353,6 +2396,7 @@ class DefpointsBlock(POFChunk):
         if not m:
             m = Mesh()
         m.verts = self.vert_list
+        m.num_norms = self.norm_counts
 
         return m
 
