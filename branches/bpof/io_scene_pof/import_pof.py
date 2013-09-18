@@ -45,9 +45,9 @@ from volition import pof
 def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
     """Takes a submodel and adds a Blender mesh."""
     m = sobj.get_mesh()
-	
-	if fore_is_y:
-		m.flip_yz()
+    
+    if fore_is_y:
+        m.flip_yz()
 
     me = bpy.data.meshes.new("{}-mesh".format(sobj.name.decode()))
 
@@ -70,8 +70,8 @@ def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
             this_edge = (v1, v2)
             this_edge = frozenset(this_edge)
             e.use_edge_sharp = m.edges[this_edge]
-		for f in me.polygons:
-			f.use_smooth = True
+        for f in me.polygons:
+            f.use_smooth = True
 
     if import_textures:
         uvlayer = me.tessface_uv_textures.new('uv').data
@@ -139,13 +139,13 @@ def load(operator, context, filepath,
 
     # Textures first
 
-	# we'll do this by making a material for every texture
-	# if we're importing pretty textures, we'll make a
-	# Blender texture each for shine, normal, glow, etc.
-	
-	# we'll keep the materials in a list and link every material
-	# to every submodel object.  That way, we can assign
-	# material indices that are the same as the POF texture indices
+    # we'll do this by making a material for every texture
+    # if we're importing pretty textures, we'll make a
+    # Blender texture each for shine, normal, glow, etc.
+    
+    # we'll keep the materials in a list and link every material
+    # to every submodel object.  That way, we can assign
+    # material indices that are the same as the POF texture indices
 
     if not os.path.isdir(texture_path):
         print("Given texture path is not a valid directory.")
@@ -169,6 +169,7 @@ def load(operator, context, filepath,
                 bimgs.append(bpy.data.images.load(tex_path))
             else:
                 print("Missing texture {}".format(tex_name))
+                bimgs.append(None)
                 missing_textures += 1
             if pretty_materials:
                 shine_name = tex_name + "-shine" + texture_format
@@ -180,12 +181,15 @@ def load(operator, context, filepath,
                 if os.path.isfile(shine_path):
                     shine_imgs.append(bpy.data.images.load(shine_path))
                 else:
+                    shine_imgs.append(None)
                     missing_textures += 1
                 if os.path.isfile(norm_path):
                     normal_imgs.append(bpy.data.images.load(norm_path))
                 else:
+                    shine_imgs.append(None)
                     missing_textures += 1
                 if os.path.isfile(glow_path):
+                    shine_imgs.append(None)
                     glow_imgs.append(bpy.data.images.load(glow_path))
                 else:
                     missing_textures += 1

@@ -150,6 +150,8 @@ class Mesh:
     fradii - a list of face radii (export only) (calc)
     centers - a list of face centers (export only) (assigned)
     tex_ids - a list of texture ids (assigned) == material id in Blender
+    u - UV 'u' coords by face
+    v - UV 'v' coords by face
 
     When using the edge split modifier in Blender, you basically get duplicate vertices,
     each with its own normal.  During export, we should determine if a vertex is already
@@ -235,18 +237,18 @@ class Mesh:
             num = a * b * c
             denom = sqrt(2 * a2 * b2 + 2 * b2 * c2 + 2 * c2 * a2 - a4 - b4 - c4)
             fradii.append(num/denom)
-			
-	def flip_yz(self):
-		"""
-		Switch Y axis with Z axis
-		"""
-		verts = self.verts
-		for v in verts:
-			# no fancy slicing here, v is a tuple
-			x = v[0]
-			y = v[1]
-			z = v[2]
-			v = (x, z, y)
+            
+    def flip_yz(self):
+        """
+        Switch Y axis with Z axis
+        """
+        verts = self.verts
+        for v in verts:
+            # no fancy slicing here, v is a tuple
+            x = v[0]
+            y = v[1]
+            z = v[2]
+            v = (x, z, y)
 
 
 ## POF helpers ##
