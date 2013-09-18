@@ -32,7 +32,7 @@ import bpy
 import bmesh
 import mathutils
 from bpy_extras.io_utils import unpack_list, unpack_face_list
-from volition import pof
+from . import pof
 
 
 def create_mesh(bm, use_smooth_groups, fore_is_y):
