@@ -39,23 +39,7 @@ def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
     """Takes a submodel and adds a Blender mesh."""
     m = sobj.get_mesh()
 
-##    bm = bmesh.new()
-##
-##    for f in m.face_list:
-##        bfverts = list()
-##        for v in f.vert_list:
-##            x = v.co[0]
-##            y = v.co[1]
-##            z = v.co[2]
-##            if fore_is_y:
-##                co = (x, z, y)
-##            else:
-##                co = (x, y, z)
-##            bfverts.append(bm.verts.new(co))
-##        bface = bm.faces.new(bfverts)
-
     me = bpy.data.meshes.new("{}-mesh".format(sobj.name.decode()))
-##    bm.to_mesh(me)
 
     vert_list = m.verts
     face_list = m.faces
@@ -143,13 +127,13 @@ def load(operator, context, filepath,
 
     # Textures first
 
-        # we'll do this by making a material for every texture
-        # if we're importing pretty textures, we'll make a
-        # Blender texture each for shine, normal, glow, etc.
-
-        # we'll keep the materials in a list and link every material
-        # to every submodel object.  That way, we can assign
-        # material indices that are the same as the POF texture indices
+	# we'll do this by making a material for every texture
+	# if we're importing pretty textures, we'll make a
+	# Blender texture each for shine, normal, glow, etc.
+	
+	# we'll keep the materials in a list and link every material
+	# to every submodel object.  That way, we can assign
+	# material indices that are the same as the POF texture indices
 
     if not os.path.isdir(texture_path):
         print("Given texture path is not a valid directory.")
