@@ -35,9 +35,19 @@ from bpy_extras.io_utils import unpack_list, unpack_face_list
 from volition import pof
 
 
+## For texturing:
+# In load(), make material for each texture
+# In create_mesh(), make ONE uv layer, assign materials per face
+# For a given mesh, all textures (materials) take their coords from a single
+# active UV layer.  All you have to do is assign each face a material.
+
+
 def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
     """Takes a submodel and adds a Blender mesh."""
     m = sobj.get_mesh()
+	
+	if fore_is_y:
+		m.flip_yz()
 
     me = bpy.data.meshes.new("{}-mesh".format(sobj.name.decode()))
 
@@ -60,6 +70,8 @@ def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
             this_edge = (v1, v2)
             this_edge = frozenset(this_edge)
             e.use_edge_sharp = m.edges[this_edge]
+		for f in me.polygons:
+			f.use_smooth = True
 
     if import_textures:
         uvlayer = me.tessface_uv_textures.new('uv').data

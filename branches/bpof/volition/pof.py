@@ -25,20 +25,8 @@
 
 ## TO DO LIST:
 
-## Helpers
-# Mesh
-    # calculate edge_list from face_list
-    # calculate vert_list from edge_list
-## Chunks
-# SubmodelChunk
-    # get_mesh()
-    # set_mesh(mesh)
-    # make_bsp_tree()
-## POF and BSP functions
-# validate_pof()
-# make_defpoints()
-# make_polylist()
-# generate_tree_recursion()
+# Insignia mesh methods
+# Fix SLDC to work with new meshes
 
 
 from math import fsum, sqrt
@@ -247,6 +235,18 @@ class Mesh:
             num = a * b * c
             denom = sqrt(2 * a2 * b2 + 2 * b2 * c2 + 2 * c2 * a2 - a4 - b4 - c4)
             fradii.append(num/denom)
+			
+	def flip_yz(self):
+		"""
+		Switch Y axis with Z axis
+		"""
+		verts = self.verts
+		for v in verts:
+			# no fancy slicing here, v is a tuple
+			x = v[0]
+			y = v[1]
+			z = v[2]
+			v = (x, z, y)
 
 
 ## POF helpers ##
@@ -414,7 +414,6 @@ class PolyModel:
             path = chunks["PATH"]
             for p in path.path_parents:
                 if p not in path.path_names and p != b'':
-                    #raise InvalidChunkError(path, "Path does not exist, {}".format(p))
                     pass
             for i, p in enumerate(path.turret_sobj_num):
                 for v in p:
@@ -529,7 +528,6 @@ class HeaderChunk(POFChunk):
             self.CHUNK_ID = b'OHDR'
 
     def read_chunk(self, bin_data):
-        #logging.debug("Reading header chunk...")
         if self.pof_ver >= 2116:        # FreeSpace 2
             self.max_radius = unpack_float(bin_data.read(4))
             self.obj_flags = unpack_int(bin_data.read(4))
@@ -669,7 +667,6 @@ class HeaderChunk(POFChunk):
 class TextureChunk(POFChunk):
     CHUNK_ID = b'TXTR'
     def read_chunk(self, bin_data):
-        #logging.debug("Reading texture chunk...")
         num_textures = unpack_int(bin_data.read(4))
         textures = list()
         for i in range(num_textures):
@@ -710,7 +707,6 @@ class TextureChunk(POFChunk):
 class MiscChunk(POFChunk):
     CHUNK_ID = b'PINF'
     def read_chunk(self, bin_data):
-        #logging.debug("Reading PINF chunk...")
         self.lines = bin_data.read().split(b'\0')
 
     def write_chunk(self):
@@ -742,7 +738,6 @@ class MiscChunk(POFChunk):
 class PathChunk(POFChunk):
     CHUNK_ID = b'PATH'
     def read_chunk(self, bin_data):
-        #logging.debug("Reading path chunk...")
         num_paths = unpack_int(bin_data.read(4))
 
         path_names = list()
@@ -850,7 +845,6 @@ class PathChunk(POFChunk):
 class SpecialChunk(POFChunk):
     CHUNK_ID = b'SPCL'
     def read_chunk(self, bin_data):
-        #logging.debug("Reading special point chunk...")
         num_special_points = unpack_int(bin_data.read(4))
 
         point_names = list()
@@ -920,9 +914,7 @@ class ShieldChunk(POFChunk):
     CHUNK_ID = b'SHLD'
     name = b"shield"    # needed for blender
     def read_chunk(self, bin_data):
-        #logging.debug("Reading shield chunk...")
         num_verts = unpack_int(bin_data.read(4))
-        #logging.debug("Number of verts {}".format(num_verts))
 
         vert_list = list()
 
@@ -1030,7 +1022,6 @@ class ShieldChunk(POFChunk):
 class EyeChunk(POFChunk):
     CHUNK_ID = b" EYE"
     def read_chunk(self, bin_data):
-        #logging.debug("Reading eye chunk...")
         num_eyes = unpack_int(bin_data.read(4))
         sobj_num = list()
         eye_offset = list()
@@ -1084,7 +1075,6 @@ class GunChunk(POFChunk):           # GPNT and MPNT
         self.CHUNK_ID = chunk_id
 
     def read_chunk(self, bin_data):
-        #logging.debug("Reading gun point chunk...")
         num_banks = unpack_int(bin_data.read(4))
         gun_points = list()
         gun_norms = list()
@@ -1144,7 +1134,6 @@ class TurretChunk(POFChunk):           # TGUN and TMIS
         self.CHUNK_ID = chunk_id
 
     def read_chunk(self, bin_data):
-        #logging.debug("Reading turret chunk...")
         num_banks = unpack_int(bin_data.read(4))
 
         barrel_sobj = list()
@@ -1213,7 +1202,6 @@ class TurretChunk(POFChunk):           # TGUN and TMIS
 class DockChunk(POFChunk):
     CHUNK_ID = b"DOCK"
     def read_chunk(self, bin_data):
-        #logging.debug("Reading dock chunk...")
         num_docks = unpack_int(bin_data.read(4))
 
         dock_properties = list()
@@ -1295,7 +1283,6 @@ class DockChunk(POFChunk):
 class FuelChunk(POFChunk):
     CHUNK_ID = b"FUEL"
     def read_chunk(self, bin_data):
-        #logging.debug("Reading thruster chunk...")
         pof_ver = self.pof_ver
         num_thrusters = unpack_int(bin_data.read(4))
 
@@ -1433,8 +1420,6 @@ class ModelChunk(POFChunk):
             if eof_test != b"":
                 block_id = unpack_int(bin_data.read(4))
                 block_size = unpack_int(bin_data.read(4))
-                #logging.debug("{} {}".format(block_id, block_size))
-                #logging.debug("BSP block ID {} with size {}".format(block_id, block_size))
                 if block_id != 0:
                     this_block = chunk_dict[block_id]()
                     this_block_data = RawData(bin_data.read(block_size - 8))
@@ -1484,7 +1469,6 @@ class ModelChunk(POFChunk):
         bsp_tree = self.bsp_tree
 
         for block in bsp_tree:
-            #logging.debug("{} {}".format(block.CHUNK_ID, len(block)))
             bsp_data += block.write_chunk()
 
         logging.debug("And BSP data size {}...".format(len(bsp_data)))
@@ -1513,7 +1497,6 @@ class ModelChunk(POFChunk):
         m.num_norms = num_norms
         # until I figure something out for Mesh, we have
         # to make our own Face list and Edge list
-        #vert_list = list(m.vert_list)
         face_list = list()
         u = list()
         v = list()
@@ -1529,8 +1512,6 @@ class ModelChunk(POFChunk):
         m.vnorms = vert_norms
         m.u = u
         m.v = v
-
-        # m.calculate_sharp_edges()
 
         return m
 
@@ -1555,7 +1536,6 @@ class ModelChunk(POFChunk):
 
         # make initial polylist
         face_list = list()
-        #vert_list = m.get_vert_list()
         for i, f in enumerate(m.face_list):
             cur_node = TexpolyBlock()
             cur_node.normal = m.fnorms[i]
@@ -1581,9 +1561,6 @@ class ModelChunk(POFChunk):
     def _add_faces(self, face_list):
         bsp_tree = self.bsp_tree
         defpoints = self._defpoints.vert_list
-        #print("Adding {} faces".format(len(face_list)))
-        #self._faces_added += len(face_list)
-        #print("Total faces added: ", self._faces_added)
         max_pnt, min_pnt = self._get_bounds(face_list)
         bbox = BoundboxBlock()
         bbox.max = max_pnt
@@ -1591,15 +1568,6 @@ class ModelChunk(POFChunk):
         bsp_tree.append(bbox)
         bsp_tree += face_list
         bsp_tree.append(EndBlock())
-
-##        for f in face_list:
-##            fmax_pnt, fmin_pnt = self._get_bounds([f])
-##            cur_node = BoundboxBlock()
-##            cur_node.max = fmax_pnt
-##            cur_node.min = fmin_pnt
-##            bsp_tree.append(cur_node)
-##            bsp_tree.append(f)
-##            bsp_tree.append(EndBlock())
 
         self.bsp_tree = bsp_tree
 
@@ -1791,7 +1759,6 @@ class ModelChunk(POFChunk):
 class SquadChunk(POFChunk):
     CHUNK_ID = b"INSG"
     def read_chunk(self, bin_data):
-        #logging.debug("Reading insignia chunk...")
         num_insig = unpack_int(bin_data.read(4))
         insig_detail_level = list()
         vert_list = list()
@@ -1902,7 +1869,6 @@ class SquadChunk(POFChunk):
 class CenterChunk(POFChunk):
     CHUNK_ID = b"ACEN"
     def read_chunk(self, bin_data):
-        #logging.debug("Reading autocenter chunk...")
         self.co = unpack_vector(bin_data.read(12))
 
     def write_chunk(self):
@@ -1930,7 +1896,6 @@ class CenterChunk(POFChunk):
 class GlowChunk(POFChunk):
     CHUNK_ID = b"GLOW"
     def read_chunk(self, bin_data):
-        #logging.debug("Reading glowpoint chunk...")
         num_banks = unpack_int(bin_data.read(4))
         disp_time = list()
         on_time = list()
@@ -2094,7 +2059,6 @@ class TreeChunk(POFChunk):
                 raise InvalidChunkError(self, "Must have either shield chunk or mesh")
 
         face_list = m.face_list     # Hopefully the same index as the shield chunk
-        #self._vert_list = m.get_vert_list()
 
         self.shield_tree = list()
         self._generate_tree_recursion(face_list)
@@ -2319,13 +2283,9 @@ class EndBlock(POFChunk):
 class DefpointsBlock(POFChunk):
     CHUNK_ID = 1
     def read_chunk(self, bin_data):
-        #logging.debug("Found Defpoints")
         num_verts = unpack_int(bin_data.read(4))
-        #logging.debug("Number of verts {}".format(num_verts))
         num_norms = unpack_int(bin_data.read(4))
-        #logging.debug("Number of normals {}".format(num_norms))
         vert_data_offset = unpack_int(bin_data.read(4))
-        #logging.debug("Vert data offset {} bytes".format(vert_data_offset))
 
         norm_counts = list()
 
@@ -2333,8 +2293,6 @@ class DefpointsBlock(POFChunk):
             norm_counts.append(unpack_byte(bin_data.read(1)))
 
         self.norm_counts = norm_counts
-
-        #logging.debug("Norm counts \n{}".format(norm_counts))
 
         if bin_data.tell() != vert_data_offset - 8:
             logging.warning("DEFPOINTS:Current location does not equal vert data offset")
@@ -2349,9 +2307,6 @@ class DefpointsBlock(POFChunk):
             for j in range(norm_counts[i]):
                 vert_norms[i].append(unpack_vector(bin_data.read(12)))
 
-        #logging.debug("Vert list \n{}".format(vert_list))
-        #logging.debug("Vert norms \n{}".format(vert_norms))
-
         self.vert_list = vert_list
         self.vert_norms = vert_norms
 
@@ -2363,8 +2318,6 @@ class DefpointsBlock(POFChunk):
         else:
             return False
 
-        #logging.debug("Writing Defpoints")
-
         vert_list = self.vert_list
         vert_norms = self.vert_norms
         num_verts = len(vert_list)
@@ -2373,10 +2326,6 @@ class DefpointsBlock(POFChunk):
 
         for v in vert_norms:
             num_norms += len(v)
-
-        #logging.debug("Number of verts {}".format(num_verts))
-        #logging.debug("Number of norms {}".format(num_norms))
-        #logging.debug("Vert data offset {}".format(vert_data_offset))
 
         chunk += pack_int(num_verts)
         chunk += pack_int(num_norms)
