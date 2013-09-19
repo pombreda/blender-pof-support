@@ -1561,15 +1561,18 @@ class ModelChunk(POFChunk):
         face_list = list()
         uv = list()
         vert_norms = list()
+        tex_ids = list()
         for node in raw_faces:
             face_list.append(node.vert_list)
             vert_norms.append(node.norm_list)
             # in practice, all polies will be textured
             # FLATPOLY blocks were only used in Descent
             uv.append(list(zip(node.u, node.v)))
+            tex_ids.append(node.texture_id)
         m.faces = face_list
         m.vnorms = vert_norms
         m.uv = uv
+        m.tex_ids = tex_ids
 
         # m.calculate_sharp_edges()
 

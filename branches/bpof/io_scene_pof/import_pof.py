@@ -67,9 +67,15 @@ def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
             uv_data.uv1 = tf[0]
             uv_data.uv2 = tf[1]
             uv_data.uv3 = tf[2]
+            uv_data.image = import_textures[m.tex_ids[n]].texture_slots[0].texture.image
+        for mat in import_textures:
+            me.materials.append(mat)
+        for i, f in enumerate(me.tessfaces):
+            f.material_index = m.tex_ids[i]
+        uvtex.active = True
+        uvtex.active_render = True
 
-    # thought:
-    # can we index edges in a dict by a frozenset of the vert coords?
+    # index edges in a dict by a frozenset of the vert coords
     # that way we don't have to worry about messed up indicies when
     # adding the seams for smoothgroups (an edge might be [v1, v2] or [v2, v1])
     me.update(calc_edges=True)
@@ -115,7 +121,7 @@ def load(operator, context, filepath,
         fore_is_y=True,
         import_shields=True,
         import_textures=False,
-        texture_path="../maps/",
+        texture_path="/../maps/",
         texture_format=".dds",
         pretty_materials=False
         ):
@@ -156,6 +162,7 @@ def load(operator, context, filepath,
     texture_path = bytes(texture_path, 'UTF-8')
     texture_format = bytes(texture_format, 'UTF-8')
     texture_path = os.path.normpath(os.path.dirname(filepath) + texture_path)
+    print(texture_path)
 
     if not os.path.isdir(texture_path):
         print("Given texture path is not a valid directory.")
@@ -181,9 +188,9 @@ def load(operator, context, filepath,
                 bimgs.append(None)
                 missing_textures += 1
             if pretty_materials:
-                shine_name = tex_name + "-shine" + texture_format
-                norm_name = tex_name + "-normal" + texture_format
-                glow_name = tex_name + "-glow" + texture_format
+                shine_name = tex + b"-shine" + texture_format
+                norm_name = tex + b"-normal" + texture_format
+                glow_name = tex + b"-glow" + texture_format
                 shine_path = os.path.join(texture_path, shine_name)
                 norm_path = os.path.join(texture_path, norm_name)
                 glow_path = os.path.join(texture_path, glow_name)
@@ -195,44 +202,95 @@ def load(operator, context, filepath,
                 if os.path.isfile(norm_path):
                     normal_imgs.append(bpy.data.images.load(norm_path))
                 else:
-                    shine_imgs.append(None)
+                    normal_imgs.append(None)
                     missing_textures += 1
                 if os.path.isfile(glow_path):
-                    shine_imgs.append(None)
                     glow_imgs.append(bpy.data.images.load(glow_path))
                 else:
+                    glow_imgs.append(None)
                     missing_textures += 1
         print("Total missing textures: {}".format(missing_textures))
+        if missing_textures > 0:    # change this later
+            import_textures = False
 
-        # TODO Create a material for each texture listed in the chunk
-        # Each object has its own UV layer with the base texture
-        # In addition to the UV layer, the material must have a
-        # texture slot with the image, set to UV coordinates
-        # if using pretty materials, then we need additional
-        # texture slots with the other maps, same UV layer for coords
-        # We do NOT need a material for each object as long as
-        # each object's UV layer has the same name
+    # Create a material for each texture listed in the chunk
+    # Each object has its own UV layer with the base texture
+    # In addition to the UV layer, the material must have a
+    # texture slot with the image, set to UV coordinates
+    # if using pretty materials, then we need additional
+    # texture slots with the other maps, same UV layer for coords
+    # We do NOT need a material for each object as long as
+    # each object's UV layer has the same name
+
+    if import_textures:
+        # for each img, make a texture and material
+        bmats = list()
+        for i, img in enumerate(bimgs):
+            this_txtr = bpy.data.textures.new(img.name + '-txtr', type='IMAGE')
+            this_txtr.image = img
+            this_txtr.use_alpha = True
+            this_mat = bpy.data.materials.new(img.name + '-mat')
+            mat_txtr = this_mat.texture_slots.add()
+            mat_txtr.texture = this_txtr
+            mat_txtr.texture_coords = 'UV'
+            mat_txtr.use_map_color_diffuse = True
+            mat_txtr.use_map_alpha = True
+            mat_txtr.use = True
+
+            if pretty_materials:
+                this_shine = bpy.data.textures.new(shine_imgs[i].name + '-txtr', type='IMAGE')
+                this_shine.image = shine_imgs[i]
+                #this_shine.use_alpha = True
+                mat_shine = this_mat.texture_slots.add()
+                mat_shine.texture = this_shine
+                mat_shine.texture_coords = 'UV'
+                mat_shine.use_map_specular = True
+                mat_shine.use = True
+
+                this_norm = bpy.data.textures.new(norm_imgs[i].name + '-txtr', type='IMAGE')
+                this_norm.image = norm.imgs[i]
+                #this_norm.use_alpha = True
+                this_norm.use_normal_map = True
+                mat_norm = this_mat.texture_slots.add()
+                mat_norm.texture = this_norm
+                mat_norm.texture_coords = 'UV'
+                mat_norm.use_map_normal = True
+                mat_norm.use = True
+
+                this_glow = bpy.data.textures.new(glow_imgs[i].name + '-txtr', type='IMAGE')
+                this_glow.image = glow_imgs[i]
+                #this_glow.use_alpha = True
+                mat_glow = this_mat.texture_slots.add()
+                mat_glow.texture = this_glow
+                mat_glow.texture_coords = 'UV'
+                #mat_glow.use_map_color_emission = True
+                mat_glow.use_map_ambient = True
+                mat_glow.use = True
+
+            bmats.append(this_mat)
+    else:
+        bmats = False
 
     # Now submodels
 
     new_objects = dict()    # dict instead of list so
                             # we can ref by POF model id
     # for testing UV mapping:
-    import_textures = True
+    #import_textures = True
     if import_only_main:
         # import only first detail level and its children
 
         # get first detail level
         hull_id = pof_hdr.sobj_detail_levels[0]
         hull = pof_handler.submodels[hull_id]
-        hull_obj = create_mesh(hull, use_smooth_groups, fore_is_y, import_textures)
+        hull_obj = create_mesh(hull, use_smooth_groups, fore_is_y, bmats)
         new_objects[hull_id] = hull_obj
 
         # get children
         child_ids = dict()
         for model in pof_handler.submodels.values():
             if model.parent_id == hull_id:
-                child_obj = create_mesh(model, use_smooth_groups, fore_is_y, import_textures)
+                child_obj = create_mesh(model, use_smooth_groups, fore_is_y, bmats)
                 child_obj.parent = hull_obj
                 if fore_is_y:
                     off_x = model.offset[0]
@@ -246,7 +304,7 @@ def load(operator, context, filepath,
         # get second children
         for model in pof_handler.submodels.values():
             if model.parent_id in child_ids:
-                child_obj = create_mesh(model, use_smooth_groups, fore_is_y, import_textures)
+                child_obj = create_mesh(model, use_smooth_groups, fore_is_y, bmats)
                 child_obj.parent = new_objects[model.parent_id]
                 x_off = pof_handler.submodels[model.parent_id].offset[0] + model.offset[0]
                 y_off = pof_handler.submodels[model.parent_id].offset[1] + model.offset[1]
@@ -265,7 +323,7 @@ def load(operator, context, filepath,
         if import_detail_levels:
             for i in pof_hdr.sobj_detail_levels:
                 model = pof_handler.submodels[i]
-                this_obj = create_mesh(model, use_smooth_groups, fore_is_y, import_textures)
+                this_obj = create_mesh(model, use_smooth_groups, fore_is_y, bmats)
                 # put LODs on sep layers from each other
                 this_obj.layers[0] = False
                 this_obj.layers[layer_count] = True
@@ -276,7 +334,7 @@ def load(operator, context, filepath,
         if import_debris:
             for i in pof_hdr.sobj_debris:
                 model = pof_handler.submodels[i]
-                this_obj = create_mesh(model, use_smooth_groups, fore_is_y, import_textures)
+                this_obj = create_mesh(model, use_smooth_groups, fore_is_y, bmats)
                 # put debris on sep layer from LODs, but same as each other
                 this_obj.layers[0] = False
                 this_obj.layers[layer_count] = True
@@ -289,7 +347,7 @@ def load(operator, context, filepath,
                 tchunk = pof_handler.chunks["TGUN"]
                 for i in range(len(tchunk.base_sobj)):
                     model = pof_handler.submodels[tchunk.base_sobj[i]]
-                    this_obj = create_mesh(model, use_smooth_groups, fore_is_y, import_textures)
+                    this_obj = create_mesh(model, use_smooth_groups, fore_is_y, bmats)
                     if main_detail is not None:
                         this_obj.parent = main_detail
                     off_x = model.offset[0]
@@ -302,7 +360,7 @@ def load(operator, context, filepath,
 
                     if tchunk.barrel_sobj[i] > -1:
                         bar_model = pof_handler.submodels[tchunk.barrel_sobj[i]]
-                        barrel_obj = create_mesh(bar_model, use_smooth_groups, fore_is_y, import_textures)
+                        barrel_obj = create_mesh(bar_model, use_smooth_groups, fore_is_y, bmats)
                         barrel_obj.parent = this_obj
                         off_x += model.offset[0]
                         off_y += model.offset[1]
@@ -318,7 +376,7 @@ def load(operator, context, filepath,
                 tchunk = pof_handler.chunks["TMIS"]
                 for i in range(len(tchunk.base_sobj)):
                     model = pof_handler.submodels[tchunk.base_sobj[i]]
-                    this_obj = create_mesh(model, use_smooth_groups, fore_is_y, import_textures)
+                    this_obj = create_mesh(model, use_smooth_groups, fore_is_y, bmats)
                     if main_detail is not None:
                         this_obj.parent = main_detail
                     off_x = model.offset[0]
@@ -346,7 +404,7 @@ def load(operator, context, filepath,
         if import_specials:
             for model in pof_handler.submodels.values():
                 if b"subsystem" in model.properties:
-                    this_obj = create_mesh(model, use_smooth_groups, fore_is_y, import_textures)
+                    this_obj = create_mesh(model, use_smooth_groups, fore_is_y, bmats)
                     this_obj.parent = new_objects[model.parent_id]
                     new_objects[model.model_id] = this_obj
 
