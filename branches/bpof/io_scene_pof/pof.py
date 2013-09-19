@@ -822,7 +822,7 @@ class PathChunk(POFChunk):
                 turret_sobj_num[i].append(list())
 
                 for k in range(vert_num_turrets[i][j]):
-                    self.turret_sobj_num[i][j].append(unpack_int(bin_data.read(4)))
+                    turret_sobj_num[i][j].append(unpack_int(bin_data.read(4)))
 
         self.path_names = path_names
         self.path_parents = path_parents

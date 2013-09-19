@@ -62,12 +62,17 @@ def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
         m.flip_v()
         uvtex = me.tessface_uv_textures.new()
         uvtex.name = me.name
+        invisible_faces = 0
         for n, tf in enumerate(m.uv):
             uv_data = uvtex.data[n]
             uv_data.uv1 = tf[0]
             uv_data.uv2 = tf[1]
             uv_data.uv3 = tf[2]
-            uv_data.image = import_textures[m.tex_ids[n]].texture_slots[0].texture.image
+            tex_slot = import_textures[m.tex_ids[n]].texture_slots[0]
+            if tex_slot is not None:
+                uv_data.image = tex_slot.texture.image
+            else:
+                invisible_faces += 1
         for mat in import_textures:
             me.materials.append(mat)
         for i, f in enumerate(me.tessfaces):
@@ -94,6 +99,8 @@ def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
     bobj.name = sobj.name.decode()
     if use_smooth_groups:
         bobj.modifiers.new("POF smoothing", "EDGE_SPLIT")
+    if invisible_faces > 2 * (len(me.polygons) / 3):
+        bobj.draw_type = 'WIRE'
         
     return bobj
 
@@ -183,6 +190,8 @@ def load(operator, context, filepath,
             tex_path = os.path.join(texture_path, tex + texture_format)
             if os.path.isfile(tex_path):
                 bimgs.append(bpy.data.images.load(tex_path))
+            elif tex == b'invisible':
+                bimgs.append(None)
             else:
                 print("Missing texture {}".format(tex))
                 bimgs.append(None)
@@ -226,46 +235,51 @@ def load(operator, context, filepath,
         # for each img, make a texture and material
         bmats = list()
         for i, img in enumerate(bimgs):
-            this_txtr = bpy.data.textures.new(img.name + '-txtr', type='IMAGE')
-            this_txtr.image = img
-            this_txtr.use_alpha = True
-            this_mat = bpy.data.materials.new(img.name + '-mat')
-            mat_txtr = this_mat.texture_slots.add()
-            mat_txtr.texture = this_txtr
-            mat_txtr.texture_coords = 'UV'
-            mat_txtr.use_map_color_diffuse = True
-            mat_txtr.use_map_alpha = True
-            mat_txtr.use = True
+            if img is None:
+                this_mat = bpy.data.materials.new('invisible')
+                this_mat.alpha = 1.0
+                this_mat.use_transparency = True
+            else:
+                this_txtr = bpy.data.textures.new(img.name + '-txtr', type='IMAGE')
+                this_txtr.image = img
+                this_txtr.use_alpha = True
+                this_mat = bpy.data.materials.new(img.name + '-mat')
+                mat_txtr = this_mat.texture_slots.add()
+                mat_txtr.texture = this_txtr
+                mat_txtr.texture_coords = 'UV'
+                mat_txtr.use_map_color_diffuse = True
+                mat_txtr.use_map_alpha = True
+                mat_txtr.use = True
 
-            if pretty_materials:
-                this_shine = bpy.data.textures.new(shine_imgs[i].name + '-txtr', type='IMAGE')
-                this_shine.image = shine_imgs[i]
-                #this_shine.use_alpha = True
-                mat_shine = this_mat.texture_slots.add()
-                mat_shine.texture = this_shine
-                mat_shine.texture_coords = 'UV'
-                mat_shine.use_map_specular = True
-                mat_shine.use = True
+                if pretty_materials:
+                    this_shine = bpy.data.textures.new(shine_imgs[i].name + '-txtr', type='IMAGE')
+                    this_shine.image = shine_imgs[i]
+                    #this_shine.use_alpha = True
+                    mat_shine = this_mat.texture_slots.add()
+                    mat_shine.texture = this_shine
+                    mat_shine.texture_coords = 'UV'
+                    mat_shine.use_map_specular = True
+                    mat_shine.use = True
 
-                this_norm = bpy.data.textures.new(norm_imgs[i].name + '-txtr', type='IMAGE')
-                this_norm.image = norm.imgs[i]
-                #this_norm.use_alpha = True
-                this_norm.use_normal_map = True
-                mat_norm = this_mat.texture_slots.add()
-                mat_norm.texture = this_norm
-                mat_norm.texture_coords = 'UV'
-                mat_norm.use_map_normal = True
-                mat_norm.use = True
+                    this_norm = bpy.data.textures.new(norm_imgs[i].name + '-txtr', type='IMAGE')
+                    this_norm.image = norm.imgs[i]
+                    #this_norm.use_alpha = True
+                    this_norm.use_normal_map = True
+                    mat_norm = this_mat.texture_slots.add()
+                    mat_norm.texture = this_norm
+                    mat_norm.texture_coords = 'UV'
+                    mat_norm.use_map_normal = True
+                    mat_norm.use = True
 
-                this_glow = bpy.data.textures.new(glow_imgs[i].name + '-txtr', type='IMAGE')
-                this_glow.image = glow_imgs[i]
-                #this_glow.use_alpha = True
-                mat_glow = this_mat.texture_slots.add()
-                mat_glow.texture = this_glow
-                mat_glow.texture_coords = 'UV'
-                #mat_glow.use_map_color_emission = True
-                mat_glow.use_map_ambient = True
-                mat_glow.use = True
+                    this_glow = bpy.data.textures.new(glow_imgs[i].name + '-txtr', type='IMAGE')
+                    this_glow.image = glow_imgs[i]
+                    #this_glow.use_alpha = True
+                    mat_glow = this_mat.texture_slots.add()
+                    mat_glow.texture = this_glow
+                    mat_glow.texture_coords = 'UV'
+                    #mat_glow.use_map_color_emission = True
+                    mat_glow.use_map_ambient = True
+                    mat_glow.use = True
 
             bmats.append(this_mat)
     else:
