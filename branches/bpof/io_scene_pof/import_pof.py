@@ -53,15 +53,26 @@ def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
 
     vert_list = m.verts
     face_list = m.faces
-    me.from_pydata(vert_list, [], face_list)
+    me.vertices.add(len(vert_list))
+    me.vertices.foreach_set('co', unpack_list(vert_list))
+    me.tessfaces.add(len(face_list))
+    me.tessfaces.foreach_set('vertices_raw', unpack_face_list(face_list))
 
-    me.validate()
-    me.update(calc_edges=True)
-    
+    if import_textures:
+        m.flip_v()
+        uvtex = me.tessface_uv_textures.new()
+        uvtex.name = me.name
+        for n, tf in enumerate(m.uv):
+            uv_data = uvtex.data[n]
+            uv_data.uv1 = tf[0]
+            uv_data.uv2 = tf[1]
+            uv_data.uv3 = tf[2]
+
     # thought:
     # can we index edges in a dict by a frozenset of the vert coords?
     # that way we don't have to worry about messed up indicies when
     # adding the seams for smoothgroups (an edge might be [v1, v2] or [v2, v1])
+    me.update(calc_edges=True)
     if use_smooth_groups:
         m.calc_sharp()
         for e in me.edges:
@@ -72,12 +83,6 @@ def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
             e.use_edge_sharp = m.edges[this_edge]
         for f in me.polygons:
             f.use_smooth = True
-
-    if import_textures:
-        uvlayer = me.tessface_uv_textures.new('uv').data
-        # uvlayer.foreach_set('image', faces.texture_id_list)
-        # uvlayer.foreach_set('uv', faces.uv_coords_list)
-        # TODO actually import the UV wrapping
 
     bobj = bpy.data.objects.new("Mesh", me)
     bobj.name = sobj.name.decode()
@@ -147,6 +152,11 @@ def load(operator, context, filepath,
     # to every submodel object.  That way, we can assign
     # material indices that are the same as the POF texture indices
 
+    # get an absolute path for textures
+    texture_path = bytes(texture_path, 'UTF-8')
+    texture_format = bytes(texture_format, 'UTF-8')
+    texture_path = os.path.normpath(os.path.dirname(filepath) + texture_path)
+
     if not os.path.isdir(texture_path):
         print("Given texture path is not a valid directory.")
         import_textures = False
@@ -163,12 +173,11 @@ def load(operator, context, filepath,
             normal_imgs = list()
             glow_imgs = list()
         for tex in txtr_chunk.textures:
-            tex_name = tex.decode()
-            tex_path = os.path.join(texture_path, tex_name + texture_format)
+            tex_path = os.path.join(texture_path, tex + texture_format)
             if os.path.isfile(tex_path):
                 bimgs.append(bpy.data.images.load(tex_path))
             else:
-                print("Missing texture {}".format(tex_name))
+                print("Missing texture {}".format(tex))
                 bimgs.append(None)
                 missing_textures += 1
             if pretty_materials:
@@ -208,7 +217,8 @@ def load(operator, context, filepath,
 
     new_objects = dict()    # dict instead of list so
                             # we can ref by POF model id
-
+    # for testing UV mapping:
+    import_textures = True
     if import_only_main:
         # import only first detail level and its children
 

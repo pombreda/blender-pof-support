@@ -266,6 +266,35 @@ class Mesh:
             denom = sqrt(2 * a2 * b2 + 2 * b2 * c2 + 2 * c2 * a2 - a4 - b4 - c4)
             fradii.append(num/denom)
 
+    def flip_yz(self):
+        """
+        Switch Y axis with Z axis
+        """
+        verts = self.verts
+        new_verts = list()
+        for v in verts:
+            # no fancy slicing here, v is a tuple
+            x = v[0]
+            y = v[1]
+            z = v[2]
+            v = (x, z, y)
+            new_verts.append(v)
+        self.verts = new_verts
+
+    def flip_v(self):
+        """
+        Flip V axis of UV coords
+        """
+        uv = self.uv
+        new_uv = list()
+        for i, face in enumerate(uv):
+            new_uv.append(list())
+            for vert in face:
+                u = vert[0]
+                v = vert[1] * -1
+                new_uv[i].append([u, v])
+        self.uv = new_uv
+
 
 ## POF helpers ##
 
@@ -1502,7 +1531,6 @@ class ModelChunk(POFChunk):
         bsp_tree = self.bsp_tree
 
         for block in bsp_tree:
-            #logging.debug("{} {}".format(block.CHUNK_ID, len(block)))
             bsp_data += block.write_chunk()
 
         logging.debug("And BSP data size {}...".format(len(bsp_data)))
@@ -1522,7 +1550,6 @@ class ModelChunk(POFChunk):
                 # should only happen once per model
                 vert_list = node.vert_list
                 num_norms = node.norm_counts
-                #vert_norms = node.vert_norms
             elif node.CHUNK_ID == 2 or node.CHUNK_ID == 3:
                 raw_faces.append(node)
 
@@ -1531,22 +1558,18 @@ class ModelChunk(POFChunk):
         m.num_norms = num_norms
         # until I figure something out for Mesh, we have
         # to make our own Face list and Edge list
-        #vert_list = list(m.vert_list)
         face_list = list()
-        u = list()
-        v = list()
+        uv = list()
         vert_norms = list()
         for node in raw_faces:
             face_list.append(node.vert_list)
             vert_norms.append(node.norm_list)
             # in practice, all polies will be textured
             # FLATPOLY blocks were only used in Descent
-            u.append(node.u)
-            v.append(node.v)
+            uv.append(list(zip(node.u, node.v)))
         m.faces = face_list
         m.vnorms = vert_norms
-        m.u = u
-        m.v = v
+        m.uv = uv
 
         # m.calculate_sharp_edges()
 
@@ -1573,7 +1596,6 @@ class ModelChunk(POFChunk):
 
         # make initial polylist
         face_list = list()
-        #vert_list = m.get_vert_list()
         for i, f in enumerate(m.face_list):
             cur_node = TexpolyBlock()
             cur_node.normal = m.fnorms[i]
@@ -1599,9 +1621,6 @@ class ModelChunk(POFChunk):
     def _add_faces(self, face_list):
         bsp_tree = self.bsp_tree
         defpoints = self._defpoints.vert_list
-        #print("Adding {} faces".format(len(face_list)))
-        #self._faces_added += len(face_list)
-        #print("Total faces added: ", self._faces_added)
         max_pnt, min_pnt = self._get_bounds(face_list)
         bbox = BoundboxBlock()
         bbox.max = max_pnt
@@ -1609,15 +1628,6 @@ class ModelChunk(POFChunk):
         bsp_tree.append(bbox)
         bsp_tree += face_list
         bsp_tree.append(EndBlock())
-
-##        for f in face_list:
-##            fmax_pnt, fmin_pnt = self._get_bounds([f])
-##            cur_node = BoundboxBlock()
-##            cur_node.max = fmax_pnt
-##            cur_node.min = fmin_pnt
-##            bsp_tree.append(cur_node)
-##            bsp_tree.append(f)
-##            bsp_tree.append(EndBlock())
 
         self.bsp_tree = bsp_tree
 
@@ -2337,13 +2347,9 @@ class EndBlock(POFChunk):
 class DefpointsBlock(POFChunk):
     CHUNK_ID = 1
     def read_chunk(self, bin_data):
-        #logging.debug("Found Defpoints")
         num_verts = unpack_int(bin_data.read(4))
-        #logging.debug("Number of verts {}".format(num_verts))
         num_norms = unpack_int(bin_data.read(4))
-        #logging.debug("Number of normals {}".format(num_norms))
         vert_data_offset = unpack_int(bin_data.read(4))
-        #logging.debug("Vert data offset {} bytes".format(vert_data_offset))
 
         norm_counts = list()
 
@@ -2351,8 +2357,6 @@ class DefpointsBlock(POFChunk):
             norm_counts.append(unpack_byte(bin_data.read(1)))
 
         self.norm_counts = norm_counts
-
-        #logging.debug("Norm counts \n{}".format(norm_counts))
 
         if bin_data.tell() != vert_data_offset - 8:
             logging.warning("DEFPOINTS:Current location does not equal vert data offset")
@@ -2367,9 +2371,6 @@ class DefpointsBlock(POFChunk):
             for j in range(norm_counts[i]):
                 vert_norms[i].append(unpack_vector(bin_data.read(12)))
 
-        #logging.debug("Vert list \n{}".format(vert_list))
-        #logging.debug("Vert norms \n{}".format(vert_norms))
-
         self.vert_list = vert_list
         self.vert_norms = vert_norms
 
@@ -2381,8 +2382,6 @@ class DefpointsBlock(POFChunk):
         else:
             return False
 
-        #logging.debug("Writing Defpoints")
-
         vert_list = self.vert_list
         vert_norms = self.vert_norms
         num_verts = len(vert_list)
@@ -2391,10 +2390,6 @@ class DefpointsBlock(POFChunk):
 
         for v in vert_norms:
             num_norms += len(v)
-
-        #logging.debug("Number of verts {}".format(num_verts))
-        #logging.debug("Number of norms {}".format(num_norms))
-        #logging.debug("Vert data offset {}".format(vert_data_offset))
 
         chunk += pack_int(num_verts)
         chunk += pack_int(num_norms)

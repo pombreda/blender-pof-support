@@ -177,7 +177,7 @@ class ImportPOF(bpy.types.Operator, ImportHelper):
             name="Texture path",
             description="Path to search for textures in.",
             default="../maps/",
-            subtype="FILE_PATH",
+            #subtype="FILE_PATH",
             )
     texture_format = EnumProperty(
             name="Texture format",
