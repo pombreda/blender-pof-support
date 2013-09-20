@@ -31,33 +31,53 @@ import time
 import bpy
 import bmesh
 import mathutils
+from collections import OrderedDict
 from bpy_extras.io_utils import unpack_list, unpack_face_list
 from . import pof
 
 
-def create_mesh(bm, use_smooth_groups, fore_is_y):
+def create_mesh(bm, fore_is_y):
     """Takes a Blender mesh and returns a Volition mesh."""
-    vert_list = list()
+    verts = list()
+    vnorms = OrderedDict()
     for v in bm.vertices:
-        vert_list.append(pof.Vertex(v.co))
+        co = tuple(v.co)
+        if co not in verts:
+            verts.append(co)
+            vnorms[co] = list()
+        vnorms[co].append(tuple(v.normal))
 
-    edge_list = list()
-    for e in bm.edges:
-        e_sharp = e.use_edge_sharp
-        e_verta = vert_list[e.vertices[0]]
-        e_vertb = vert_list[e.vertices[1]]
-        edge_list.append(pof.Edge([e_verta, e_vertb], e_sharp))
-
-    face_list = list()
+    # creating the face list might be slow, have to do a lot of index()'ing
+    faces = list()
+    fvnorms = list()
+    centers = list()
+    tex_ids = list()
+    fnorms = list()
     for f in bm.polygons:
-        # user must make sure mesh is triangulated
-        f_verta = vert_list[f.vertices[0]]
-        f_vertb = vert_list[f.vertices[1]]
-        f_vertc = vert_list[f.vertices[2]]
-        edgea = pof.Edge([f_verta, f_vertb])
-        edgeb = pof.Edge([f_vertb, f_vertc])
-        edgec = pof.Edge([f_vertc, f_verta])
-        face_list.append(pof.Face([edgea, edgeb, edgec], vert_idx=f.vertices,
-                        textured=True, color=f.material_index))
+        this_face = list()
+        these_norms = list()
+        for v in f.vertices:
+            this_coord = tuple(bm.vertices[v].co)
+            this_norm = tuple(bm.vertices[v].normal)
+            this_vert = verts.index(this_coord)
+            this_face.append(this_vert)
+            these_norms.append(vnorms[this_coord].index(this_norm))
+        faces.append(this_face)
+        fvnorms.append(these_norms)
+        centers.append(tuple(f.center))
+        tex_ids.append(f.material_index)
+        fnorms.append(tuple(f.normal))
 
-    return pof.Mesh(vert_list, edge_list, face_list)
+    m = pof.Mesh()
+    m.verts = verts
+    m.vnorms = list(vnorms.values())
+    m.faces = faces
+    m.fvnorms = fvnorms
+    m.centers = centers
+    m.tex_ids = tex_ids
+    m.fnorms = fnorms
+
+    if fore_is_y:
+        m.flip_yz()
+
+    return m

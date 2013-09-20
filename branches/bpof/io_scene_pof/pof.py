@@ -173,8 +173,10 @@ class Mesh:
     
     verts - a list of vectors representing vertex coords (assigned)
     faces - a list of 3-tuples representing vertex indices (assigned)
+    fvnorms - list of 3-tuples representing vertex normal indices (export only)
     fnorms - a list of 3-tuples representing face normals (export only)
     vnorms - a list of 3-tuples of vectors representing vertex normals (assigned)
+    num_norms - a list indicating the number of normals each vertex has (assigned, import only)
     edges - a dict where each key is a frozenset of two vectors representing
         vertex coords and where each value is bool, whether the edge is sharp (import only) (calc)
     fradii - a list of face radii (export only) (calc)
@@ -1550,6 +1552,8 @@ class ModelChunk(POFChunk):
                 # should only happen once per model
                 vert_list = node.vert_list
                 num_norms = node.norm_counts
+                #vert_norms = node.vert_norms
+                # [ vert: [ (norm), (norm), ...], vert: ... ]
             elif node.CHUNK_ID == 2 or node.CHUNK_ID == 3:
                 raw_faces.append(node)
 
@@ -1560,17 +1564,17 @@ class ModelChunk(POFChunk):
         # to make our own Face list and Edge list
         face_list = list()
         uv = list()
-        vert_norms = list()
+        #vert_norms = list()
         tex_ids = list()
         for node in raw_faces:
             face_list.append(node.vert_list)
-            vert_norms.append(node.norm_list)
+            #vert_norms.append(node.norm_list)
             # in practice, all polies will be textured
             # FLATPOLY blocks were only used in Descent
             uv.append(list(zip(node.u, node.v)))
             tex_ids.append(node.texture_id)
         m.faces = face_list
-        m.vnorms = vert_norms
+        #m.vnorms = vert_norms
         m.uv = uv
         m.tex_ids = tex_ids
 
