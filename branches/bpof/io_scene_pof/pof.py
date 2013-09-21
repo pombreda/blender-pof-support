@@ -314,6 +314,8 @@ class PolyModel:
             if chunk.CHUNK_ID == b'OBJ2' or chunk.CHUNK_ID == b'SOBJ':
                 print(chunk.model_id)
                 self.submodels[chunk.model_id] = chunk
+            elif chunk.CHUNK_ID == b' EYE' or chunk.CHUNK_ID == b'EYE ':
+                self.chunks['EYE'] = chunk
             else:
                 # There should only be one of each type of chunk
                 # other than submodels
@@ -1079,7 +1081,6 @@ class ShieldChunk(POFChunk):
 class EyeChunk(POFChunk):
     CHUNK_ID = b" EYE"
     def read_chunk(self, bin_data):
-        #logging.debug("Reading eye chunk...")
         num_eyes = unpack_int(bin_data.read(4))
         sobj_num = list()
         eye_offset = list()

@@ -444,6 +444,26 @@ def load(operator, context, filepath,
     
     # helper = bpy.ops.object.empty_add(type='PLAIN_AXES', location=(0.0, 0.0, 0.0), rotation=(0.0, 0.0, 0.0))
 
+    if import_eye_points and 'EYE' in pof_handler.chunks:
+        eye_chunk = pof_handler.chunks['EYE']
+        for i, e in enumerate(eye_chunk.eye_offset):
+            if fore_is_y:
+                e = e[0], e[2], e[1]
+            bpy.ops.object.empty_add(type='SINGLE_ARROW', location=e)
+            eye = bpy.context.active_object
+            vec = mathutils.Vector(eye_chunk.eye_normal[i])
+            if fore_is_y:
+                vec = vec.xzy
+                znorm = mathutils.Vector((0,0,1))
+            else:
+                znorm = mathutils.Vector((0,1,0))
+            quat = znorm.rotation_difference(vec)
+            eye.rotation_mode = 'QUATERNION'
+            eye.rotation_quaternion = quat
+            eye.rotation_mode = 'XYZ'
+            eye.name = 'eye'
+            eye.parent = new_objects[eye_chunk.sobj_num[i]]
+
     # done
 
     for obj in new_objects.values():
