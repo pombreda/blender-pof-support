@@ -29,7 +29,6 @@ http://code.google.com/p/blender-pof-support/wiki/ImportScript
 import os
 import time
 import bpy
-import bmesh
 import mathutils
 from bpy_extras.io_utils import unpack_list, unpack_face_list
 from . import pof
@@ -97,6 +96,7 @@ def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
             f.use_smooth = True
 
     bobj = bpy.data.objects.new("Mesh", me)
+    bobj['POF model id'] = sobj.model_id
     bobj.name = sobj.name.decode()
     if use_smooth_groups:
         bobj.modifiers.new("POF smoothing", "EDGE_SPLIT")
@@ -415,7 +415,7 @@ def load(operator, context, filepath,
 
                     if tchunk.barrel_sobj[i] > -1:
                         bar_model = pof_handler.submodels[tchunk.barrel_sobj[i]]
-                        barrel_obj = create_mesh(bar_model, use_smooth_groups, fore_is_y, import_textures)
+                        barrel_obj = create_mesh(bar_model, use_smooth_groups, fore_is_y, bmats)
                         barrel_obj.parent = this_obj
                         off_x += model.offset[0]
                         off_y += model.offset[1]
@@ -463,6 +463,23 @@ def load(operator, context, filepath,
             eye.rotation_mode = 'XYZ'
             eye.name = 'eye'
             eye.parent = new_objects[eye_chunk.sobj_num[i]]
+            
+    # Import custom properties
+    
+    if import_header_data:
+        scene['POF version'] = pof_handler.pof_ver
+        scene['Object flags'] = pof_handler.header.obj_flags
+        scene['Mass'] = pof_handler.header.mass
+        # center of mass should be helper empty
+        bpy.ops.object.empty_add(type='PLAIN_AXES', location=pof_handler.header.mass_center)
+        bpy.context.active_object.name = 'center-mass'
+        # have to break up inertia tensor b/c blender props only accept lists of ints/floats
+        scene['Inertia-0'] = list(pof_handler.header.inertia_tensor[0])
+        scene['Inertia-1'] = list(pof_handler.header.inertia_tensor[1])
+        scene['Inertia-2'] = list(pof_handler.header.inertia_tensor[2])
+        scene['Cross sections'] = pof_handler.header.num_cross_sections
+        scene['Cross section depths'] = pof_handler.header.cross_section_depth
+        scene['Cross section radii'] = pof_handler.header.cross_section_radius
 
     # done
 

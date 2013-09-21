@@ -311,6 +311,8 @@ class PolyModel:
         self.chunks = dict()
         self.submodels = dict()
         for chunk in chunks:
+            if chunk.CHUNK_ID == b'HDR2' or chunk.CHUNK_ID == b'OHDR':
+                self.header = chunk
             if chunk.CHUNK_ID == b'OBJ2' or chunk.CHUNK_ID == b'SOBJ':
                 print(chunk.model_id)
                 self.submodels[chunk.model_id] = chunk
@@ -350,10 +352,7 @@ class PolyModel:
 
         # verify header
 
-        try:
-            header = chunks["HDR2"]
-        except KeyError:
-            header = chunks["OHDR"]
+        header = self.header
 
         if pof_ver >= 2116 and header.CHUNK_ID == b'OHDR':
             header.CHUNK_ID = b'HDR2'
@@ -970,6 +969,7 @@ class SpecialChunk(POFChunk):
 class ShieldChunk(POFChunk):
     CHUNK_ID = b'SHLD'
     name = b"shield"    # needed for blender
+    model_id = -1       # needed for blender
     def read_chunk(self, bin_data):
         #logging.debug("Reading shield chunk...")
         num_verts = unpack_int(bin_data.read(4))
