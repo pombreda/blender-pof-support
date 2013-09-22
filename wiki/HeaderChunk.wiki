@@ -19,3 +19,9 @@
   * _cross_section_radius_ - List of floats, the radius of each cross-section.
   * _light_locations_ - List of vectors, the locations of each muzzleflash.
   * _light_types_ - List of ints, the type (?) of each muzzleflash.
+
+==Methods==
+
+ * *read_chunk*_(self, bin_data)_ - Reads packed binary data to create the instance attributes.
+  * _bin_data_ - A RawData or File object containing the packed binary chunk, excluding header.
+ * *write_chunk*_(self)_ - Reads the instance attributes and returns a bytes object representing the packed binary chunk, including header.
