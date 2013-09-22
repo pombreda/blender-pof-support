@@ -371,6 +371,7 @@ def load(operator, context, filepath,
             layer_count += 1
 
         if import_turrets:
+            # TODO add children
             if "TGUN" in pof_handler.chunks:
                 tchunk = pof_handler.chunks["TGUN"]
                 for i in range(len(tchunk.base_sobj)):
@@ -441,6 +442,9 @@ def load(operator, context, filepath,
         this_obj = create_mesh(model, False, fore_is_y, False)
         this_obj.draw_type = "WIRE"
         new_objects["shield"] = this_obj
+
+    for obj in new_objects.values():
+        scene.objects.link(obj)
         
     # TODO import helpers
     
@@ -452,7 +456,7 @@ def load(operator, context, filepath,
             if fore_is_y:
                 e = e[0], e[2], e[1]
             bpy.ops.object.empty_add(type='SINGLE_ARROW', location=e)
-            eye = bpy.context.active_object
+            eye = context.active_object
             vec = mathutils.Vector(eye_chunk.eye_normal[i])
             if fore_is_y:
                 vec = vec.xzy
@@ -467,6 +471,37 @@ def load(operator, context, filepath,
             print(new_objects)
             if eye_chunk.sobj_num[i] in new_objects.keys():
                 eye.parent = new_objects[eye_chunk.sobj_num[i]]
+
+    if import_special_points and 'SPCL' in pof_handler.chunks:
+        special_chunk = pof_handler.chunks['SPCL']
+        for i, p in enumerate(special_chunk.points):
+            if fore_is_y:
+                p = p[0], p[2], p[1]
+            bpy.ops.object.empty_add(type='SPHERE', location=p)
+            point = context.active_object
+            point.empty_draw_size = special_chunk.point_radius[i]
+            point.name = special_chunk.point_names[i].decode('UTF-8')
+            point['Properties'] = special_chunk.point_properties[i].decode('UTF-8')
+
+    if import_paths and 'PATH' in pof_handler.chunks:
+        path_chunk = pof_handler.chunks['PATH']
+        for i, p in enumerate(path_chunk.path_names):
+            for j, v in enumerate(path_chunk.vert_list[i]):
+                if fore_is_y:
+                    v = v[0], v[2], v[1]
+                bpy.ops.object.empty_add(type='SPHERE', location=v)
+                this_vert = context.active_object
+                this_vert.name = '{}-{}'.format(p.decode('UTF-8'), j)
+                this_vert.empty_draw_size = path_chunk.vert_rad[i][j]
+                par = path_chunk.path_parents[i].decode('UTF-8')
+                if not j:
+                    par_vert = this_vert
+                if not j and par in scene.objects:
+                    this_vert.parent = scene.objects[par]
+                elif j:
+                    this_vert.parent = par_vert
+                this_vert['Parent'] = par
+                this_vert['Turret'] = path_chunk.turret_sobj_num[i][j]
             
     # Import custom properties
     
@@ -475,7 +510,10 @@ def load(operator, context, filepath,
         scene['Object flags'] = pof_handler.header.obj_flags
         scene['Mass'] = pof_handler.header.mass
         # center of mass should be helper empty
-        bpy.ops.object.empty_add(type='PLAIN_AXES', location=pof_handler.header.mass_center)
+        p = pof_handler.header.mass_center
+        if fore_is_y:
+            p = p[0], p[2], p[1]
+        bpy.ops.object.empty_add(type='PLAIN_AXES', location=p)
         bpy.context.active_object.name = 'center-mass'
         # have to break up inertia tensor b/c blender props only accept lists of ints/floats
         scene['Inertia-0'] = list(pof_handler.header.inertia_tensor[0])
@@ -486,9 +524,6 @@ def load(operator, context, filepath,
         scene['Cross section radii'] = pof_handler.header.cross_section_radius
 
     # done
-
-    for obj in new_objects.values():
-        scene.objects.link(obj)
 
     scene.update()
     new_time = time.time()
