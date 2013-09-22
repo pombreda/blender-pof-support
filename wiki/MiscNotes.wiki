@@ -30,12 +30,12 @@ Timing information will be calculated using a series of calls to `time.time()` a
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
 }}}
-~~and a few buttons (`layout.operator()`)to additional operators defined in the module to display data contained in the VP/POF file before any geometry is imported.
+~~and a few buttons (`layout.operator()`)to additional operators defined in the module to display data contained in the VP/POF file before any geometry is imported.~~
 
-operator import pof (in import menu) creates a dialog and draws properties from other operators
+~~operator import pof (in import menu) creates a dialog and draws properties from other operators
 operator load file contains properties filepath and filetype* - if pof, creates a pof handler and import pof draws do import; if vp, pof handler draws load pof from vp
 operator load pof from vp contains an enum of all pof files in vp - creates pof handler and import pof draws do import
 operator import textures contains a filepath and attempts to pack textures specified in the txtr chunk
-operator do import contains all the properties for the actual import
+operator do import contains all the properties for the actual import~~
 
-*not drawn, but used in if/else statements for drawing other properties~~
+~~*not drawn, but used in if/else statements for drawing other properties~~
