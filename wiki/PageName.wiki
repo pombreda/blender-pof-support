@@ -1,0 +1,18 @@
+#summary Documentation for volition.pof.PathChunk
+#labels Phase-Implementation
+
+Paths are used to guide AI for various purposes, including destroying turrets and subsystems, departing fighterbays, and docking.
+
+==Instance Attributes==
+
+  * _path_names_ - List of byte-strings, the names of each path.
+  * _path_parents_ - List of byte-strings, the names of each path's parent path.
+  * _vert_list_ - For each path a list of vertices (vectors) forming the path.
+  * _vert_rad_ - For each path a list of floats, the radius of each vertex in the path.
+  * _turret_sobj_num_ - For each point in each path a number indicating the submodel of the point's parent turret.
+
+==Methods==
+
+ * *read_chunk*_(self, bin_data)_ - Reads packed binary data to create the instance attributes.
+  * _bin_data_ - A RawData or File object containing the packed binary chunk, excluding header.
+ * *write_chunk*_(self)_ - Reads the instance attributes and returns a bytes object representing the packed binary chunk, including header.
