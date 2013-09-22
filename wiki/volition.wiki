@@ -99,6 +99,8 @@ This class has four methods in addition to `read()`, `write()`, `__init__()`, `_
 
 ==Mesh==
 
+_This section requires cleanup to be accurate according to the latest revision of the code._
+
 This class is designed for use as an intermediary between a POF file's SHLD and SOBJ/OBJ2 chunks and another format such as Blender's internal geometry classes.  The class consists of a list of Vertex objects, a list of Edge objects, a list of Face objects, and methods for retrieving an indexed list of them, generating them from indexed lists, and working with vertex normals.
 
 ===Vertices===
