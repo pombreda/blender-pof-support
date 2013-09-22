@@ -1,57 +1,6 @@
 #summary Miscellaneous thoughts and notes for future reference.
 #labels Phase-QA,Featured
 
-==Testing the importer and exporter==
-~~In the early stages, we can test the BSP tree generator by importing an existing POF file and exporting just a single submodel from it, then opening the resultant POF file in PCS or ModelView32.~~
-
-~~Additional tests should include making sure calculated stuff equals actual values.  For example, `HeaderChunk.length` should ideally equal the length of the data passed when instantiating the class when reading from a POF file.~~
-
-The main test of the POF module will be to make sure all chunks can be imported and then exported, and the resulting POF file will be essentially the same as the original.  This includes importing ShieldChunks and ModelChunks to Mesh objects and then recreating the shield collision tree and model BSP trees from the imported mesh data.
-
-==Vertex normals==
-Calculating vertex normals can only be done with an edge object with the boolean attribute `seam` or something similar to mark smoothgroups.  Something like:
-
-{{{
-class Mesh:
-    vertices = list()
-    edges = list()
-    faces = list()
-    class Vertex:
-        coords = vector()
-        normals = list() #sequence of vectors
-    class Edge:
-        vertices = list() #size=2
-        seam = True
-    class Face:
-        edges = list()
-        # __init__() function checks to make sure edges connect
-        normal = vector()
-        center = vector()
-        radius = float()
-    def make_vert_list()
-    def make_face_list()
-    def calculate_normals()
-}}}
-
-In this example, `Mesh` should be the main class we're working with, only creating `Vertex`, `Edge`, and `Face` objects to add them to a `Mesh` object as in `Mesh.vertices.append(Vertex(coords))`.  Assigning vertices to an edge will always take the form `Edge.vertices = [Mesh.vertices[1],Mesh.vertices[5]]`.  Example:
-
-{{{
-m = Mesh()
-for v in vert_list:    #vert_list is a sequence of vectors
-    m.vertices.append(Vertex(v))
-for f in face_list:    #face_list is a 2-d sequence of vertex indices
-    e = Edge()
-    e.vertices = [m.vertices[f[0]],m.vertices[f[1]]
-    m.edges.append(e)
-    e.vertices = [m.vertices[f[1]],m.vertices[f[2]]
-    m.edges.append(e)
-    e.vertices = [m.vertices[f[2]],m.vertices[f[0]]
-    m.edges.append(e)
-    m.faces.append(Face(m.edges[len(m.edges)-4:]))
-}}}
-
-Something like this works because in Python, all names are treated as references.  If you have `a = Vertex()` and `b = Vertex()` and `c = [a, b]` and you change `a` or `b`, the change will be reflected in `c`.
-
 ==Mass and moment of inertia==
 Can we use Blender's weight painting and [http://en.wikipedia.org/wiki/Spieker_center Spieker Center] calculation to calculate the mass, center of mass, and inertia tensor of a full-triangulated mesh?
 
@@ -63,23 +12,7 @@ For the very first test releases, program speed is less important than release s
 
 Eventually (for v. 1.0 or v. 2.0) a rewrite of the volition module in C or C++ would be nice.  I'd rather not have to use an external module, but if performance does become an issue before a rewrite to C, we might have to use NumPy.
 
-In the mean time, the exporter will be built from the beginning to be multi-threaded, getting the number of threads from Blender.
-
-==Logging==
-The importer and exporter should be able to output a log file containing all the POF data in a human-readable format.  We'll use the built-in `logging` module.
-
-==Main `read_pof()` loop==
-Since Python doesn't do switch-case statements, a dictionary lookup would be nice.  Something like:
-{{{
-chunk_id = get_the_chunk_id(pof_file.read(4))
-chunk_length = get_the_chunk_length(pof_file.read(4))
-chunk_bin = pof_file.read(chunk_length)
-try:
-    chunk = chunk_dict[chunk_id]()
-    chunk.read_chunk(pof_file.read(chunk_length)
-except KeyError:
-    raise FileFormatError(chunk_id, "Unknown chunk detected - this is not a POF file.")
-}}}
+~~In the mean time, the exporter will be built from the beginning to be multi-threaded, getting the number of threads from Blender.~~
 
 ==PINF data==
 The exporter will provide a field for custom PINF data (e.g. for a copyright statement).  After the custom PINF data, the exporter will write the following null-terminated strings:
@@ -88,147 +21,16 @@ The exporter will provide a field for custom PINF data (e.g. for a copyright sta
 "Max BSP depth was {}. Most polys in a single node was {}".format(max_bsp_depth, most_polys)
 "Total compile time was {}ms, tree generation time was {}ms".format(pof_time, bsp_time)
 }}}
-Timing information will be calculated using a series of calls to `datetime.now()` and getting the time difference.
-
-==Things that should have their own classes==
-First rewrite, I'm going to make classes for each of these and have chunk objects deal with lists of these objects:
- * GenericPoint (position, normal)
- * GenericSpacePoint (position, radius, normal=False)
- * Path
- * PathVertex(GenericSpacePoint)
- * Subsystem(GenericSpacePoint)
- * Eye(GenericPoint)
- * GunSlot
- * GunPoint(GenericPoint)
- * TurretBank
- * TurretPoint(GenericPoint)
- * Dock
- * DockPoint(GenericPoint)
- * Thruster
- * ThrusterGlow(GenericSpacePoint)
- * Insignia
- * GlowBank
- * GlowPoint(GenericSpacePoint)
-
-==Collision trees==
-Here's how they work:
- * Define a function to check for a collision with the current node
- * If yes, the function calls itself (i.e. recursively) on the front_list (child nodes)
- * If no, the function calls itself on the back_list (sibling node and its children)
-If we had to check _every_ face, we'd have to check for collision 80 times for a shield mesh.  Instead, for the same size mesh, we only have to check for collision about 8 times.
-
-==General notes about Blender I/O scripts==
-For addons which include both import and export functions, it's usually in a folder `io-[scene/mesh]-[format]`.  The folder is treated as a Python package, with a module `import-[format].py`, a module `export-[format].py`, and an `__init__.py` script.  The `__init__.py` script contains two classes (one each for import and export) like such:
-{{{
-class ImportOBJ(bpy.types.Operator, ImportHelper):
-    '''Load a Wavefront OBJ File'''
-    bl_idname = "import_scene.obj"
-    bl_label = "Import OBJ"
-    bl_options = {'PRESET', 'UNDO'}
-
-    filename_ext = ".obj"
-    filter_glob = StringProperty(
-            default="*.obj;*.mtl",
-            options={'HIDDEN'},
-            )
-    
-    # Put import options/properties here, e.g.:
-    use_ngons = BoolProperty(
-            name="NGons",
-            description="Import faces with more then 4 verts as fgons",
-            default=True,
-            )
-            
-    def execute(self, context):
-        from . import import_obj
-        
-        # prepare to call the function which loads the model
-        
-        return import_obj.load(self, context, **keywords)
-        
-        # Note: **keywords refers to a dictionary object keywords
-        # which contains the keyword arguments for:
-        # def load(operator, context, filepath,
-                 # global_clamp_size=0.0,
-                 # use_ngons=True,
-                 # use_smooth_groups=True,
-                 # use_edges=True,
-                 # use_split_objects=True,
-                 # use_split_groups=True,
-                 # use_image_search=True,
-                 # use_groups_as_vgroups=False,
-                 # global_matrix=None,
-         # ):
-         ## Do some stuff
-         # return {'FINISHED'}
-         
-    def draw(self, context):
-        # instructions for drawing the options/properties, e.g.:
-        layout = self.layout
-
-        row = layout.row(align=True)
-        row.prop(self, "use_ngons")
-        row.prop(self, "use_edges")
-
-        layout.prop(self, "use_smooth_groups")
-
-        box = layout.box()
-        row = box.row()
-        row.prop(self, "split_mode", expand=True)
-
-        row = box.row()
-        if self.split_mode == 'ON':
-            row.label(text="Split by:")
-            row.prop(self, "use_split_objects")
-            row.prop(self, "use_split_groups")
-        else:
-            row.prop(self, "use_groups_as_vgroups")
-
-        row = layout.split(percentage=0.67)
-        row.prop(self, "global_clamp_size")
-        layout.prop(self, "axis_forward")
-        layout.prop(self, "axis_up")
-
-        layout.prop(self, "use_image_search")
-}}}
-
-The `__init__.py` script also contains methods to create menu items for import and export and to register and unregister both:
-{{{
-def menu_func_import(self, context):
-    self.layout.operator(ImportOBJ.bl_idname, text="Wavefront (.obj)")
-
-
-def menu_func_export(self, context):
-    self.layout.operator(ExportOBJ.bl_idname, text="Wavefront (.obj)")
-
-
-def register():
-    bpy.utils.register_module(__name__)
-
-    bpy.types.INFO_MT_file_import.append(menu_func_import)
-    bpy.types.INFO_MT_file_export.append(menu_func_export)
-
-
-def unregister():
-    bpy.utils.unregister_module(__name__)
-
-    bpy.types.INFO_MT_file_import.remove(menu_func_import)
-    bpy.types.INFO_MT_file_export.remove(menu_func_export)
-}}}
-
-The external `volition` package needs to be placed in [Blender dir]/2.65/scripts/modules.
-
-==Mesh editing==
-Since most geometry modification will be done in Blender, being able to accurately modify our Mesh objects isn't imperative right now.  In the future, though, an `update_mesh()` method would be appropriate to ensure that each edge's and face's vertex lists match vertices in the mesh's vertex list.
+Timing information will be calculated using a series of calls to `time.time()` and getting the time difference.
 
 ==More Blender stuff==
-At first, the import/export scripts will have a layout based off of the .obj import/export scripts.  Eventually, though, we may want to build a dialog box with:
+~~At first, the import/export scripts will have a layout based off of the .obj import/export scripts.  Eventually, though, we may want to build a dialog box with:
 {{{
     def invoke(self, context, event):
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
 }}}
-and a few buttons (`layout.operator()`)to additional operators defined in the module to display data contained in the VP/POF file before any geometry is imported.  This kind of thing will be especially useful for a mission editor addon.
+and a few buttons (`layout.operator()`)to additional operators defined in the module to display data contained in the VP/POF file before any geometry is imported.
 
 operator import pof (in import menu) creates a dialog and draws properties from other operators
 operator load file contains properties filepath and filetype* - if pof, creates a pof handler and import pof draws do import; if vp, pof handler draws load pof from vp
@@ -236,4 +38,4 @@ operator load pof from vp contains an enum of all pof files in vp - creates pof 
 operator import textures contains a filepath and attempts to pack textures specified in the txtr chunk
 operator do import contains all the properties for the actual import
 
-*not drawn, but used in if/else statements for drawing other properties
+*not drawn, but used in if/else statements for drawing other properties~~
