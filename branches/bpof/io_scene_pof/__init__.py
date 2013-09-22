@@ -208,6 +208,7 @@ class ImportPOF(bpy.types.Operator, ImportHelper):
         box = layout.box()
         box.label(text="Helpers")
         box.prop(self, "import_eye_points")
+        box.prop(self, "import_paths")
         box.prop(self, "import_gun_points")
         box.prop(self, "import_mis_points")
         box.prop(self, "import_tgun_points")

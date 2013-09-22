@@ -311,6 +311,7 @@ def load(operator, context, filepath,
         hull = pof_handler.submodels[hull_id]
         hull_obj = create_mesh(hull, use_smooth_groups, fore_is_y, bmats)
         new_objects[hull_id] = hull_obj
+        scene.objects.link(hull_obj)
 
         # get children
         child_ids = dict()
@@ -326,6 +327,7 @@ def load(operator, context, filepath,
                 else:
                     child_obj.location = model.offset
                 new_objects[model.model_id] = child_obj
+                scene.objects.link(child_obj)
 
         # get second children
         for model in pof_handler.submodels.values():
@@ -340,10 +342,11 @@ def load(operator, context, filepath,
                 else:
                     child_obj.location = (x_off, y_off, z_off)
                 new_objects[model.model_id] = child_obj
+                scene.objects.link(child_obj)
 
     else:
         layer_count = 0
-        debris_layer = None
+        #debris_layer = None
         main_detail = None
 
         if import_detail_levels:
@@ -352,10 +355,12 @@ def load(operator, context, filepath,
                 model = pof_handler.submodels[i]
                 this_obj = create_mesh(model, use_smooth_groups, fore_is_y, bmats)
                 # put LODs on sep layers from each other
-                this_obj.layers[0] = False
-                this_obj.layers[layer_count] = True
-                layer_count += 1
                 new_objects[model.model_id] = this_obj
+                scene.objects.link(this_obj)
+                this_obj.layers[layer_count] = True
+                if layer_count:
+                    this_obj.layers[0] = False
+                layer_count += 1
             #main_detail = new_objects[0]
             #print(new_objects)
 
@@ -364,11 +369,13 @@ def load(operator, context, filepath,
                 model = pof_handler.submodels[i]
                 this_obj = create_mesh(model, use_smooth_groups, fore_is_y, bmats)
                 # put debris on sep layer from LODs, but same as each other
-                this_obj.layers[0] = False
-                this_obj.layers[layer_count] = True
                 new_objects[model.model_id] = this_obj
-                debris_layer = layer_count
-            layer_count += 1
+                scene.objects.link(this_obj)
+                this_obj.layers[layer_count] = True
+                if layer_count:
+                    this_obj.layers[0] = False
+                #debris_layer = layer_count
+            #layer_count += 1
 
         if import_turrets:
             # TODO add children
@@ -399,7 +406,9 @@ def load(operator, context, filepath,
                         else:
                             barrel_obj.location = (off_x, off_y, off_z)
                         new_objects[bar_model.model_id] = barrel_obj
+                        scene.objects.link(barrel_obj)
                     new_objects[model.model_id] = this_obj
+                    scene.objects.link(this_obj)
 
             if "TMIS" in pof_handler.chunks:
                 tchunk = pof_handler.chunks["TMIS"]
@@ -428,7 +437,9 @@ def load(operator, context, filepath,
                         else:
                             barrel_obj.location = (off_x, off_y, off_z)
                         new_objects[bar_model.model_id] = barrel_obj
+                        scene.objects.link(barrel_obj)
                     new_objects[model.model_id] = this_obj
+                    scene.objects.link(this_obj)
 
         if import_specials:
             for model in pof_handler.submodels.values():
@@ -436,15 +447,17 @@ def load(operator, context, filepath,
                     this_obj = create_mesh(model, use_smooth_groups, fore_is_y, bmats)
                     this_obj.parent = new_objects[model.parent_id]
                     new_objects[model.model_id] = this_obj
+                    scene.objects.link(this_obj)
 
     if import_shields and "SHLD" in pof_handler.chunks:
         model = pof_handler.chunks["SHLD"]
         this_obj = create_mesh(model, False, fore_is_y, False)
         this_obj.draw_type = "WIRE"
         new_objects["shield"] = this_obj
+        scene.objects.link(this_obj)
 
-    for obj in new_objects.values():
-        scene.objects.link(obj)
+    #for obj in new_objects.values():
+        #scene.objects.link(obj)
         
     # TODO import helpers
     
