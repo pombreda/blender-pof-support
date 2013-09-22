@@ -333,7 +333,7 @@ class PolyModel:
             chunk_list.remove(None)
         i = 2
         for chunk in self.submodels.values():
-            print(chunk.model_id)
+            #print(chunk.model_id)
             chunk_list.insert(i, chunk)
             i += 1
         return chunk_list
@@ -617,6 +617,7 @@ class HeaderChunk(POFChunk):
             for i in range(num_cross_sections):
                 cross_section_depth.append(unpack_float(bin_data.read(4)))
                 cross_section_radius.append(unpack_float(bin_data.read(4)))
+            self.num_cross_sections = num_cross_sections
             self.cross_section_depth = cross_section_depth
             self.cross_section_radius = cross_section_radius
 
@@ -2677,7 +2678,7 @@ def read_pof(pof_file):
     while True:
         chunk_id = pof_file.read(4)
         logging.debug("Found chunk {}".format(chunk_id))
-        print("Found chunk ", chunk_id)
+        #print("Found chunk ", chunk_id)
         if chunk_id != b"":
             chunk_length = unpack_int(pof_file.read(4))
             logging.debug("Chunk length {}".format(chunk_length))

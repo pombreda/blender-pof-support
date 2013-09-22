@@ -347,6 +347,7 @@ def load(operator, context, filepath,
         main_detail = None
 
         if import_detail_levels:
+            # TODO get children!
             for i in pof_hdr.sobj_detail_levels:
                 model = pof_handler.submodels[i]
                 this_obj = create_mesh(model, use_smooth_groups, fore_is_y, bmats)
@@ -355,7 +356,8 @@ def load(operator, context, filepath,
                 this_obj.layers[layer_count] = True
                 layer_count += 1
                 new_objects[model.model_id] = this_obj
-            main_detail = new_objects[0]
+            #main_detail = new_objects[0]
+            #print(new_objects)
 
         if import_debris:
             for i in pof_hdr.sobj_debris:
@@ -462,7 +464,9 @@ def load(operator, context, filepath,
             eye.rotation_quaternion = quat
             eye.rotation_mode = 'XYZ'
             eye.name = 'eye'
-            eye.parent = new_objects[eye_chunk.sobj_num[i]]
+            print(new_objects)
+            if eye_chunk.sobj_num[i] in new_objects.keys():
+                eye.parent = new_objects[eye_chunk.sobj_num[i]]
             
     # Import custom properties
     
