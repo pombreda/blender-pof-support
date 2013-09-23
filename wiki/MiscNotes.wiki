@@ -15,7 +15,7 @@ Eventually (for v. 1.0 or v. 2.0) a rewrite of the volition module in C or C++ w
 ~~In the mean time, the exporter will be built from the beginning to be multi-threaded, getting the number of threads from Blender.~~
 
 ===Multiprocessing===
-Can we use multiprocessing to speed up BSP tree compilation?
+Can we use multiprocessing to speed up BSP tree compilation?  _Should do some tests outside Blender..._
 {{{
 import multiprocessing
 ...
