@@ -23,23 +23,6 @@
 
 ## No guarantees about pep8 compliance
 
-## TO DO LIST:
-
-## Helpers
-# Mesh
-    # calculate edge_list from face_list
-    # calculate vert_list from edge_list
-## Chunks
-# SubmodelChunk
-    # get_mesh()
-    # set_mesh(mesh)
-    # make_bsp_tree()
-## POF and BSP functions
-# validate_pof()
-# make_defpoints()
-# make_polylist()
-# generate_tree_recursion()
-
 
 from math import fsum, sqrt
 from .bintools import *
@@ -333,7 +316,6 @@ class PolyModel:
             chunk_list.remove(None)
         i = 2
         for chunk in self.submodels.values():
-            #print(chunk.model_id)
             chunk_list.insert(i, chunk)
             i += 1
         return chunk_list
@@ -463,9 +445,8 @@ class PolyModel:
         if "PATH" in chunks:
             path = chunks["PATH"]
             for p in path.path_parents:
-                if p not in path.path_names and p != b'':
-                    #raise InvalidChunkError(path, "Path does not exist, {}".format(p))
-                    pass
+                if not self.get_submodel_by_name(p) and p != b'':
+                    raise InvalidChunkError(path, "Path parent not found, {}".format(p))
             for i, p in enumerate(path.turret_sobj_num):
                 for v in p:
                     for t in v:
@@ -564,13 +545,6 @@ class POFChunk:
 
 
 class HeaderChunk(POFChunk):
-
-    """POF file header chunk.  Defines various metadata about the model.
-
-    Methods:
-        read_chunk(bin_data) - takes any Python file object or RawData object and attempts to parse it.  Assumes the chunk header (the chunk ID and length) is NOT included and does not size checking.  Returns True if successful.
-        write_chunk() - attempts to pack the data in the chunk into a bytes object, which is returned.  This method DOES include the chunk ID and length in the returned data."""
-
     def __init__(self, pof_ver=2117, chunk_id=b'PSPO'):
         self.pof_ver = pof_ver
         if pof_ver >= 2116:
@@ -579,7 +553,6 @@ class HeaderChunk(POFChunk):
             self.CHUNK_ID = b'OHDR'
 
     def read_chunk(self, bin_data):
-        #logging.debug("Reading header chunk...")
         if self.pof_ver >= 2116:        # FreeSpace 2
             self.max_radius = unpack_float(bin_data.read(4))
             self.obj_flags = unpack_int(bin_data.read(4))
@@ -720,7 +693,6 @@ class HeaderChunk(POFChunk):
 class TextureChunk(POFChunk):
     CHUNK_ID = b'TXTR'
     def read_chunk(self, bin_data):
-        #logging.debug("Reading texture chunk...")
         num_textures = unpack_int(bin_data.read(4))
         textures = list()
         for i in range(num_textures):
@@ -761,7 +733,6 @@ class TextureChunk(POFChunk):
 class MiscChunk(POFChunk):
     CHUNK_ID = b'PINF'
     def read_chunk(self, bin_data):
-        #logging.debug("Reading PINF chunk...")
         self.lines = bin_data.read().split(b'\0')
 
     def write_chunk(self):
@@ -793,7 +764,6 @@ class MiscChunk(POFChunk):
 class PathChunk(POFChunk):
     CHUNK_ID = b'PATH'
     def read_chunk(self, bin_data):
-        #logging.debug("Reading path chunk...")
         num_paths = unpack_int(bin_data.read(4))
 
         path_names = list()
@@ -901,7 +871,6 @@ class PathChunk(POFChunk):
 class SpecialChunk(POFChunk):
     CHUNK_ID = b'SPCL'
     def read_chunk(self, bin_data):
-        #logging.debug("Reading special point chunk...")
         num_special_points = unpack_int(bin_data.read(4))
 
         point_names = list()
@@ -972,9 +941,7 @@ class ShieldChunk(POFChunk):
     name = b"shield"    # needed for blender
     model_id = -1       # needed for blender
     def read_chunk(self, bin_data):
-        #logging.debug("Reading shield chunk...")
         num_verts = unpack_int(bin_data.read(4))
-        #logging.debug("Number of verts {}".format(num_verts))
 
         vert_list = list()
 
@@ -1030,7 +997,6 @@ class ShieldChunk(POFChunk):
         return chunk
 
     def get_mesh(self):
-        """Returns a mesh object created from the chunk data."""
 
         shld_mesh = Mesh()
         shld_mesh.verts = self.vert_list
@@ -1038,7 +1004,6 @@ class ShieldChunk(POFChunk):
         return shld_mesh
 
     def set_mesh(self, m):
-        """Creates chunk data from a mesh object."""
 
         self.num_verts = len(m.verts)
         self.vert_list = m.verts
@@ -1135,7 +1100,6 @@ class GunChunk(POFChunk):           # GPNT and MPNT
         self.CHUNK_ID = chunk_id
 
     def read_chunk(self, bin_data):
-        #logging.debug("Reading gun point chunk...")
         num_banks = unpack_int(bin_data.read(4))
         gun_points = list()
         gun_norms = list()
@@ -1195,7 +1159,6 @@ class TurretChunk(POFChunk):           # TGUN and TMIS
         self.CHUNK_ID = chunk_id
 
     def read_chunk(self, bin_data):
-        #logging.debug("Reading turret chunk...")
         num_banks = unpack_int(bin_data.read(4))
 
         barrel_sobj = list()
@@ -1264,7 +1227,6 @@ class TurretChunk(POFChunk):           # TGUN and TMIS
 class DockChunk(POFChunk):
     CHUNK_ID = b"DOCK"
     def read_chunk(self, bin_data):
-        #logging.debug("Reading dock chunk...")
         num_docks = unpack_int(bin_data.read(4))
 
         dock_properties = list()
@@ -1346,7 +1308,6 @@ class DockChunk(POFChunk):
 class FuelChunk(POFChunk):
     CHUNK_ID = b"FUEL"
     def read_chunk(self, bin_data):
-        #logging.debug("Reading thruster chunk...")
         pof_ver = self.pof_ver
         num_thrusters = unpack_int(bin_data.read(4))
 
@@ -1484,8 +1445,6 @@ class ModelChunk(POFChunk):
             if eof_test != b"":
                 block_id = unpack_int(bin_data.read(4))
                 block_size = unpack_int(bin_data.read(4))
-                #logging.debug("{} {}".format(block_id, block_size))
-                #logging.debug("BSP block ID {} with size {}".format(block_id, block_size))
                 if block_id != 0:
                     this_block = chunk_dict[block_id]()
                     this_block_data = RawData(bin_data.read(block_size - 8))
@@ -1828,7 +1787,6 @@ class ModelChunk(POFChunk):
 class SquadChunk(POFChunk):
     CHUNK_ID = b"INSG"
     def read_chunk(self, bin_data):
-        #logging.debug("Reading insignia chunk...")
         num_insig = unpack_int(bin_data.read(4))
         insig_detail_level = list()
         vert_list = list()
@@ -1939,7 +1897,6 @@ class SquadChunk(POFChunk):
 class CenterChunk(POFChunk):
     CHUNK_ID = b"ACEN"
     def read_chunk(self, bin_data):
-        #logging.debug("Reading autocenter chunk...")
         self.co = unpack_vector(bin_data.read(12))
 
     def write_chunk(self):
@@ -1967,7 +1924,6 @@ class CenterChunk(POFChunk):
 class GlowChunk(POFChunk):
     CHUNK_ID = b"GLOW"
     def read_chunk(self, bin_data):
-        #logging.debug("Reading glowpoint chunk...")
         num_banks = unpack_int(bin_data.read(4))
         disp_time = list()
         on_time = list()
@@ -2131,7 +2087,6 @@ class TreeChunk(POFChunk):
                 raise InvalidChunkError(self, "Must have either shield chunk or mesh")
 
         face_list = m.face_list     # Hopefully the same index as the shield chunk
-        #self._vert_list = m.get_vert_list()
 
         self.shield_tree = list()
         self._generate_tree_recursion(face_list)
@@ -2678,7 +2633,6 @@ def read_pof(pof_file):
     while True:
         chunk_id = pof_file.read(4)
         logging.debug("Found chunk {}".format(chunk_id))
-        #print("Found chunk ", chunk_id)
         if chunk_id != b"":
             chunk_length = unpack_int(pof_file.read(4))
             logging.debug("Chunk length {}".format(chunk_length))
