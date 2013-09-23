@@ -733,7 +733,7 @@ class TextureChunk(POFChunk):
 class MiscChunk(POFChunk):
     CHUNK_ID = b'PINF'
     def read_chunk(self, bin_data):
-        self.lines = bin_data.read().split(b'\0')
+        self.lines = bin_data.read().decode('UTF-8').split('\0')
 
     def write_chunk(self):
         chunk = self.CHUNK_ID
@@ -745,7 +745,7 @@ class MiscChunk(POFChunk):
 
         logging.debug("Writing PINF chunk with size {}...".format(length))
 
-        chunk += b"\0".join(self.lines) + b"\0"
+        chunk += bytes("\0".join(self.lines) + "\0")
 
         return chunk
 
@@ -1514,7 +1514,6 @@ class ModelChunk(POFChunk):
                 vert_list = node.vert_list
                 num_norms = node.norm_counts
                 #vert_norms = node.vert_norms
-                # [ vert: [ (norm), (norm), ...], vert: ... ]
             elif node.CHUNK_ID == 2 or node.CHUNK_ID == 3:
                 raw_faces.append(node)
 
@@ -1529,11 +1528,12 @@ class ModelChunk(POFChunk):
         tex_ids = list()
         for node in raw_faces:
             face_list.append(node.vert_list)
-            #vert_norms.append(node.norm_list)
-            # in practice, all polies will be textured
-            # FLATPOLY blocks were only used in Descent
-            uv.append(list(zip(node.u, node.v)))
-            tex_ids.append(node.texture_id)
+            if node.CHUNK_ID == 2:
+                uv.append([[0,0]] * len(node.vert_list))
+                tex_ids.append(None)
+            else:
+                uv.append(list(zip(node.u, node.v)))
+                tex_ids.append(node.texture_id)
         m.faces = face_list
         #m.vnorms = vert_norms
         m.uv = uv

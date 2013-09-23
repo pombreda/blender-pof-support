@@ -70,7 +70,10 @@ def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
             uv_data.uv3 = tf[2]
             if len(tf) == 4:
                 uv_data.uv4 = tf[3]
-            tex_slot = import_textures[m.tex_ids[n]].texture_slots[0]
+            if m.tex_ids[n] is not None:
+                tex_slot = import_textures[m.tex_ids[n]].texture_slots[0]
+            else:
+                tex_slot = None
             if tex_slot is not None:
                 uv_data.image = tex_slot.texture.image
             else:
@@ -78,7 +81,8 @@ def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
         for mat in import_textures:
             me.materials.append(mat)
         for i, f in enumerate(me.tessfaces):
-            f.material_index = m.tex_ids[i]
+            if m.tex_ids[n] is not None:
+                f.material_index = m.tex_ids[i]
         uvtex.active = True
         uvtex.active_render = True
 
@@ -537,6 +541,7 @@ def load(operator, context, filepath,
         scene['Cross sections'] = pof_handler.header.num_cross_sections
         scene['Cross section depths'] = pof_handler.header.cross_section_depth
         scene['Cross section radii'] = pof_handler.header.cross_section_radius
+        scene['Misc. info'] = ' '.join(pof_handler.chunks['PINF'].lines)
 
     # done
 
