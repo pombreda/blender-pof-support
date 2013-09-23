@@ -68,6 +68,8 @@ def create_mesh(sobj, use_smooth_groups, fore_is_y, import_textures):
             uv_data.uv1 = tf[0]
             uv_data.uv2 = tf[1]
             uv_data.uv3 = tf[2]
+            if len(tf) == 4:
+                uv_data.uv4 = tf[3]
             tex_slot = import_textures[m.tex_ids[n]].texture_slots[0]
             if tex_slot is not None:
                 uv_data.image = tex_slot.texture.image
