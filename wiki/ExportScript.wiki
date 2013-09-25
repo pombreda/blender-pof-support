@@ -1,3 +1,0 @@
-#summary Details on the export script for Blender
-
-Placeholder

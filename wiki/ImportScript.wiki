@@ -1,3 +1,0 @@
-#summary Details on the POF import script for Blender.
-
-Placeholder
